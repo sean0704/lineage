@@ -155,11 +155,7 @@
         .equip-btn:hover { background-color: #4299e1; }
         .use-btn { background-color: #a0aec0; }
         .use-btn:hover { background-color: #718096; }
-        .buy-btn { background-color: #48bb78; }
-        .buy-btn:hover { background-color: #38a169; }
-        .sell-btn { background-color: #f56565; }
-        .sell-btn:hover { background-color: #e53e3e; }
-
+        
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
@@ -211,7 +207,11 @@
             </div>
         </div>
 
-        <div class="stats-grid">
+        <div id="gameOutput" class="game-output"></div>
+        <div id="buttonGroup" class="button-group"></div>
+        <div id="inventoryDisplay" class="list-container hidden"></div>
+        
+        <div class="stats-grid mt-4">
             <div class="stat-item">
                 <div id="playerGold" class="value"></div>
                 <div class="label">金幣</div>
@@ -238,11 +238,6 @@
             </div>
         </div>
 
-        <div id="featureBar" class="flex justify-around p-2 rounded-lg bg-gray-700 mt-4 gap-2">
-            <button id="featureBtnInventory" class="game-button">背包</button>
-            <button id="featureBtnReturnToVillage" class="game-button">回村</button>
-        </div>
-
         <div id="equippedItemsDisplay" class="list-container">
             <h3 class="text-xl font-bold mb-2 text-center text-gray-300">
                 已裝備物品
@@ -252,11 +247,6 @@
                 <ul id="equippedList"></ul>
             </div>
         </div>
-
-        <div id="gameOutput" class="game-output"></div>
-        <div id="buttonGroup" class="button-group"></div>
-        <div id="inventoryDisplay" class="list-container hidden"></div>
-        <div id="shopDisplay" class="list-container hidden"></div>
     </div>
 
     <!-- Modals -->
@@ -283,7 +273,6 @@
         // --- 1. DOM Elements & Constants ---
         DOM: {},
         CONSTANTS: {
-            SAVE_KEY: 'dungeonAdventureSaveData',
             MAX_DUNGEON_FLOOR: 7,
             EXPLORATIONS_PER_FLOOR: 10,
             MONSTER_HP_SCALING: 0.2,
@@ -310,18 +299,16 @@
             this.cacheDOMElements();
             this.loadData();
             this.bindEvents();
-            if (!this.loadGame()) {
-                this.resetGame();
-            }
+            this.resetGame();
         },
 
         cacheDOMElements() {
             const ids = [
                 'playerHealthBarFill', 'playerHealthText', 'equippedList', 'playerGold', 'playerAttack',
                 'playerDefense', 'playerLevel', 'playerXP', 'currentFloor',
-                'gameOutput', 'buttonGroup', 'inventoryDisplay', 'shopDisplay', 'gameOverModal',
+                'gameOutput', 'buttonGroup', 'inventoryDisplay', 'gameOverModal',
                 'gameOverMessage', 'restartButton', 'toggleEquippedButton', 'equippedListContainer',
-                'featureBtnInventory', 'featureBtnReturnToVillage', 'equipConfirmModal', 'equipModalTitle',
+                'equipConfirmModal', 'equipModalTitle',
                 'equipComparison', 'confirmEquipButton', 'cancelEquipButton'
             ];
             ids.forEach(id => {
@@ -333,27 +320,34 @@
         
         loadData() {
             this.data.items = {
-                'dagger': { name: '匕首', type: 'weapon', slot: 'rightHand', buy: 150, sell: 55, attack: 3, defense: 0 },
-                'shortBow': { name: '短弓', type: 'weapon', slot: 'rightHand', buy: 120, sell: 50, attack: 4, defense: 0 },
-                'longSword': { name: '長劍', type: 'weapon', slot: 'rightHand', sell: 1500, attack: 7, defense: 0 },
-                'greatAxe': { name: '巨斧', type: 'weapon', slot: 'rightHand', sell: 385, attack: 5, defense: 0 },
-                'mithrilDagger': { name: '米索莉短劍', type: 'weapon', slot: 'rightHand', sell: 2500, attack: 5, defense: 0 },
-                'twoHandedSword': { name: '雙手劍', type: 'weapon', slot: 'rightHand', sell: 9000, attack: 12, defense: 0 },
-                'wizardStaff': { name: '巫杖', type: 'weapon', slot: 'rightHand', sell: 4500, attack: 8, defense: 0 },
-                'leatherArmor': { name: '皮甲', type: 'armor', slot: 'body', buy: 800, sell: 400, defense: 2 },
-                'vineArmor': { name: '藤甲', type: 'armor', slot: 'body', sell: 1000, defense: 3 },
-                'scaleMail': { name: '鱗甲', type: 'armor', slot: 'body', sell: 4000, defense: 4 },
-                'ironArmor': { name: '鐵盔甲', type: 'armor', slot: 'body', sell: 15000, defense: 6 },
-                'leatherHelm': { name: '皮盔甲', type: 'armor', slot: 'head', buy: 400, sell: 150, defense: 1 },
-                'ironHelm': { name: '鐵頭盔', type: 'armor', slot: 'head', buy: 750, sell: 300, defense: 2 },
-                'mageHat': { name: '法師帽', type: 'armor', slot: 'head', buy: 250, sell: 100, defense: 1 },
-                'elvenShield': { name: '精靈盾牌', type: 'armor', slot: 'leftHand', sell: 2000, defense: 2 },
-                'woodenShield': { name: '木盾', type: 'armor', slot: 'leftHand', buy: 80, sell: 30, defense: 1 },
-                'redPotion': { name: '紅色藥水', type: 'potion', buy: 50, sell: 20, effect: { type: 'heal', amount: 30 } },
-                'greenPotion': { name: '綠色藥水', type: 'potion', buy: 200, sell: 100, effect: { type: 'heal', amount: 50 } },
-                'bravePotion': { name: '勇敢藥水', type: 'potion', buy: 800, sell: 400, effect: { type: 'heal', amount: 75 } },
-                'elvenWafer': { name: '精靈餅乾', type: 'potion', buy: 150, sell: 50, effect: { type: 'heal', amount: 40 } },
-                'teleportHomeScroll': { name: '傳送回家的卷軸', type: 'scroll', buy: 250, sell: 100, effect: { type: 'teleportHome' } },
+                // Common
+                'dagger': { name: '匕首', type: 'weapon', slot: 'rightHand', sell: 55, attack: 3, defense: 0, rarity: 'common' },
+                'shortBow': { name: '短弓', type: 'weapon', slot: 'rightHand', sell: 50, attack: 4, defense: 0, rarity: 'common' },
+                'woodenShield': { name: '木盾', type: 'armor', slot: 'leftHand', sell: 30, defense: 1, rarity: 'common' },
+                'leatherHelm': { name: '皮盔甲', type: 'armor', slot: 'head', sell: 150, defense: 1, rarity: 'common' },
+                'leatherArmor': { name: '皮甲', type: 'armor', slot: 'body', sell: 400, defense: 2, rarity: 'common' },
+                'mageHat': { name: '法師帽', type: 'armor', slot: 'head', sell: 100, defense: 1, rarity: 'common' },
+                
+                // Uncommon
+                'greatAxe': { name: '巨斧', type: 'weapon', slot: 'rightHand', sell: 385, attack: 5, defense: 0, rarity: 'uncommon' },
+                'longSword': { name: '長劍', type: 'weapon', slot: 'rightHand', sell: 1500, attack: 7, defense: 0, rarity: 'uncommon' },
+                'mithrilDagger': { name: '米索莉短劍', type: 'weapon', slot: 'rightHand', sell: 2500, attack: 5, defense: 0, rarity: 'uncommon' },
+                'wizardStaff': { name: '巫杖', type: 'weapon', slot: 'rightHand', sell: 4500, attack: 8, defense: 0, rarity: 'uncommon' },
+                'vineArmor': { name: '藤甲', type: 'armor', slot: 'body', sell: 1000, defense: 3, rarity: 'uncommon' },
+                'elvenShield': { name: '精靈盾牌', type: 'armor', slot: 'leftHand', sell: 2000, defense: 2, rarity: 'uncommon' },
+                'ironHelm': { name: '鐵頭盔', type: 'armor', slot: 'head', sell: 300, defense: 2, rarity: 'uncommon' },
+                'scaleMail': { name: '鱗甲', type: 'armor', slot: 'body', sell: 4000, defense: 4, rarity: 'uncommon' },
+
+                // Rare
+                'twoHandedSword': { name: '雙手劍', type: 'weapon', slot: 'rightHand', sell: 9000, attack: 12, defense: 0, rarity: 'rare' },
+                'ironArmor': { name: '鐵盔甲', type: 'armor', slot: 'body', sell: 15000, defense: 6, rarity: 'rare' },
+
+                // Consumables (no rarity)
+                'redPotion': { name: '紅色藥水', type: 'potion', sell: 20, effect: { type: 'heal', amount: 30 } },
+                'greenPotion': { name: '綠色藥水', type: 'potion', sell: 100, effect: { type: 'heal', amount: 50 } },
+                'bravePotion': { name: '勇敢藥水', type: 'potion', sell: 400, effect: { type: 'heal', amount: 75 } },
+                'elvenWafer': { name: '精靈餅乾', type: 'potion', sell: 50, effect: { type: 'heal', amount: 40 } },
+                'teleportHomeScroll': { name: '傳送回家的卷軸', type: 'scroll', sell: 100, effect: { type: 'teleportHome' } },
             };
             this.data.monsters = {
                 'goblin': { name: '妖魔', level: 20, hp: 80, attack: 16, goldMin: 200, goldMax: 400, xpReward: 100, drops: [{ itemKey: 'redPotion', chance: 0.3 }] },
@@ -391,45 +385,10 @@
         bindEvents() {
             this.DOM.restartButton.addEventListener('click', () => this.resetGame());
             this.DOM.toggleEquippedButton.addEventListener('click', () => this.toggleEquippedDisplay());
-            this.DOM.featureBtnInventory.addEventListener('click', () => this.showInventory());
-            this.DOM.featureBtnReturnToVillage.addEventListener('click', () => this.returnToVillage());
             this.DOM.cancelEquipButton.addEventListener('click', () => this.DOM.equipConfirmModal.classList.add('hidden'));
         },
 
         // --- 5. Game State Management ---
-        saveGame() {
-            try {
-                localStorage.setItem(this.CONSTANTS.SAVE_KEY, JSON.stringify(this.state.player));
-                this.appendOutput('遊戲進度已儲存！');
-            } catch (e) {
-                console.error("無法儲存遊戲:", e);
-                this.appendOutput('錯誤：無法儲存遊戲。可能是瀏覽器設定問題。');
-            }
-        },
-
-        loadGame() {
-            try {
-                const savedData = localStorage.getItem(this.CONSTANTS.SAVE_KEY);
-                if (savedData) {
-                    this.state.player = JSON.parse(savedData);
-                    this.appendOutput('已讀取先前的遊戲進度。歡迎回來！');
-                    this.setPhase('village');
-                    return true;
-                }
-                return false;
-            } catch (e) {
-                console.error("無法讀取存檔:", e);
-                this.appendOutput('讀取存檔失敗，將開始新遊戲。');
-                return false;
-            }
-        },
-
-        deleteSave() {
-            localStorage.removeItem(this.CONSTANTS.SAVE_KEY);
-            this.appendOutput('存檔已刪除。');
-            this.resetGame();
-        },
-        
         resetGame() {
             this.state.player = this.getInitialPlayerState();
             this.state.currentMonster = null;
@@ -456,7 +415,6 @@
         // --- 6. UI Update & Rendering ---
         updateUI() {
             this.updateStatus();
-            this.updateFeatureBar();
         },
 
         updateStatus() {
@@ -497,8 +455,7 @@
                 const itemKey = this.state.player.equipped[slotKey];
                 let text = `${slotOrder[slotKey]}: `;
                 if (itemKey) {
-                    const itemData = this.data.items[itemKey];
-                    text += itemData.name;
+                    text += this.getFormattedItemName(itemKey);
                     const unequipBtn = document.createElement('button');
                     unequipBtn.textContent = '卸下';
                     unequipBtn.className = 'equip-btn';
@@ -513,13 +470,6 @@
             }
         },
 
-        updateFeatureBar() {
-            const phase = this.state.gamePhase;
-            const isSubMenu = phase === 'inventory' || phase === 'shop';
-            this.DOM.featureBtnInventory.disabled = (phase === 'game_over' || isSubMenu);
-            this.DOM.featureBtnReturnToVillage.disabled = (phase === 'village' || phase === 'start' || phase === 'game_over' || phase === 'combat' || isSubMenu);
-        },
-
         toggleEquippedDisplay() {
             const isHidden = this.DOM.equippedListContainer.classList.toggle('hidden');
             this.DOM.toggleEquippedButton.textContent = isHidden ? '展開' : '收合';
@@ -529,7 +479,6 @@
         setPhase(newPhase) {
             this.state.gamePhase = newPhase;
             this.DOM.inventoryDisplay.classList.add('hidden');
-            this.DOM.shopDisplay.classList.add('hidden');
 
             switch (newPhase) {
                 case 'start': this.showStartOptions(); break;
@@ -552,16 +501,18 @@
         showVillageOptions() {
             this.setOutput('你回到了村莊，這裡感覺安全多了。');
             this.renderButtons([
-                { text: '休息 (回滿血)', action: () => this.restInVillage() },
-                { text: '商店', action: () => this.showShop() },
                 { text: '繼續冒險', action: () => this.enterDungeon() },
-                { text: '儲存遊戲', action: () => this.saveGame(), className: 'game-button gray-button' },
-                { text: '刪除存檔', action: () => this.deleteSave(), className: 'game-button red-button' },
+                { text: '背包', action: () => this.showInventory() },
+                { text: '休息', action: () => this.restInVillage() },
             ]);
         },
 
         showExploreOptions() {
-            this.renderButtons([{ text: '探索', action: () => this.exploreDungeon() }]);
+            this.renderButtons([
+                { text: '探索', action: () => this.exploreDungeon() },
+                { text: '背包', action: () => this.showInventory() },
+                { text: '回村', action: () => this.returnToVillage() },
+            ]);
         },
 
         exploreDungeon() {
@@ -604,8 +555,8 @@
         showCombatOptions() {
             this.renderButtons([
                 { text: '攻擊', action: () => this.playerAttack(), className: 'game-button red-button' },
+                { text: '背包', action: () => this.showInventory() },
                 { text: '逃跑', action: () => this.runAway() },
-                { text: '背包 (戰鬥中)', action: () => this.showInventory() },
             ]);
         },
 
@@ -717,14 +668,13 @@
             this.DOM.gameOverMessage.textContent = message;
             this.DOM.gameOverModal.classList.remove('hidden');
             this.renderButtons([]);
-            this.updateFeatureBar();
+            this.updateUI();
         },
 
-        // --- 8. Inventory, Shop, Items ---
+        // --- 8. Inventory, Items ---
         showInventory() {
             this.state.lastMajorPhase = this.state.gamePhase;
             this.state.gamePhase = 'inventory';
-            this.DOM.shopDisplay.classList.add('hidden');
             this.DOM.inventoryDisplay.classList.remove('hidden');
             this.DOM.inventoryDisplay.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center text-gray-300">背包物品</h3><ul id="inventoryListUl"></ul>`;
             this.renderInventory();
@@ -748,7 +698,7 @@
             for (const itemKey in itemCounts) {
                 const itemData = this.data.items[itemKey];
                 const li = document.createElement('li');
-                let text = `${itemData.name} x${itemCounts[itemKey]}`;
+                let text = `${this.getFormattedItemName(itemKey)} x${itemCounts[itemKey]}`;
                 li.innerHTML = `<span class="item-name">${text}</span>`;
                 
                 const actionsDiv = document.createElement('div');
@@ -773,54 +723,6 @@
             }
         },
 
-        showShop() {
-            this.state.lastMajorPhase = this.state.gamePhase;
-            this.state.gamePhase = 'shop';
-            this.setOutput('歡迎來到商店！');
-            this.DOM.shopDisplay.classList.remove('hidden');
-            this.DOM.shopDisplay.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center text-gray-300">商店 / 販賣</h3><ul id="shopListUl"></ul>`;
-            this.renderShop();
-            this.renderButtons([{ text: '離開商店', action: () => this.closeSubmenu() }]);
-            this.updateUI();
-        },
-
-        renderShop() {
-            const listUl = this.DOM.shopDisplay.querySelector('#shopListUl');
-            listUl.innerHTML = '';
-            
-            // Shop items for buying
-            for (const itemKey in this.data.items) {
-                const itemData = this.data.items[itemKey];
-                if (!itemData.buy) continue;
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="item-name">${itemData.name} (價格: ${itemData.buy})</span>`;
-                const buyBtn = document.createElement('button');
-                buyBtn.textContent = '購買';
-                buyBtn.className = 'buy-btn';
-                buyBtn.onclick = () => this.buyItem(itemKey);
-                li.appendChild(buyBtn);
-                listUl.appendChild(li);
-            }
-            listUl.innerHTML += `<li class="text-center font-bold text-gray-500">- - - - - - - 販賣物品 - - - - - - -</li>`;
-            // Player items for selling
-            const itemCounts = this.state.player.inventory.reduce((acc, key) => { acc[key] = (acc[key] || 0) + 1; return acc; }, {});
-            if (Object.keys(itemCounts).length === 0) {
-                 listUl.innerHTML += '<li class="text-center text-gray-400">背包是空的。</li>';
-            }
-            for (const itemKey in itemCounts) {
-                const itemData = this.data.items[itemKey];
-                if (!itemData.sell) continue;
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="item-name">${itemData.name} x${itemCounts[itemKey]} (售價: ${itemData.sell})</span>`;
-                const sellBtn = document.createElement('button');
-                sellBtn.textContent = '販賣';
-                sellBtn.className = 'sell-btn';
-                sellBtn.onclick = () => this.sellItem(itemKey);
-                li.appendChild(sellBtn);
-                listUl.appendChild(li);
-            }
-        },
-
         closeSubmenu() {
             this.setPhase(this.state.lastMajorPhase);
         },
@@ -835,12 +737,12 @@
 
             let comparisonHTML = `
                 <div>
-                    <h3>${currentItemData ? currentItemData.name : '無'} (現有)</h3>
+                    <h3>${currentItemKey ? this.getFormattedItemName(currentItemKey) : '無'} (現有)</h3>
                     <p>攻擊: ${currentItemData?.attack || 0}</p>
                     <p>防禦: ${currentItemData?.defense || 0}</p>
                 </div>
                 <div>
-                    <h3>${itemData.name} (新)</h3>
+                    <h3>${this.getFormattedItemName(itemKeyToEquip)} (新)</h3>
             `;
             const attackDiff = (itemData.attack || 0) - (currentItemData?.attack || 0);
             const defenseDiff = (itemData.defense || 0) - (currentItemData?.defense || 0);
@@ -859,12 +761,10 @@
             const slot = itemData.slot;
             const currentItemKey = this.state.player.equipped[slot];
 
-            // Put current item back to inventory
             if (currentItemKey) {
                 this.state.player.inventory.push(currentItemKey);
             }
 
-            // Equip new item and remove from inventory
             this.state.player.equipped[slot] = itemKey;
             const index = this.state.player.inventory.indexOf(itemKey);
             if (index > -1) this.state.player.inventory.splice(index, 1);
@@ -915,36 +815,19 @@
             }
         },
 
-        buyItem(itemKey) {
-            const itemData = this.data.items[itemKey];
-            if (!itemData || typeof itemData.buy !== 'number') {
-                return;
-            }
-
-            if (this.state.player.gold >= itemData.buy) {
-                this.state.player.gold -= itemData.buy;
-                this.state.player.inventory.push(itemKey);
-                this.appendOutput(`你購買了 ${itemData.name}。`);
-                this.updateUI();
-                this.renderShop();
-            } else {
-                this.appendOutput('金幣不足！');
-            }
-        },
-
-        sellItem(itemKey) {
-            const itemData = this.data.items[itemKey];
-            const index = this.state.player.inventory.indexOf(itemKey);
-            if (index > -1) {
-                this.state.player.inventory.splice(index, 1);
-                this.state.player.gold += itemData.sell;
-                this.appendOutput(`你賣掉了 ${itemData.name}，獲得 ${itemData.sell} 金幣。`);
-                this.updateUI();
-                this.renderShop();
-            }
-        },
-
         // --- 9. Helper Functions ---
+        getFormattedItemName(itemKey) {
+            const itemData = this.data.items[itemKey];
+            if (!itemData) return '';
+            const rarity = itemData.rarity || 'common';
+            const colorClass = {
+                common: 'text-gray-300',
+                uncommon: 'text-green-400',
+                rare: 'text-blue-400'
+            }[rarity];
+            return `<span class="${colorClass}">${itemData.name}</span>`;
+        },
+
         calculatePlayerStats() {
             const p = this.state.player;
             let totalAttack = p.baseAttack;

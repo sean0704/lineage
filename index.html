@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地監冒險</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .game-container {
+            background-color: #2d3748; /* Slightly lighter dark */
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5);
+            max-width: 600px;
+            width: 100%;
+            padding: 1.5rem;
+            border: 2px solid #4a5568;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #a0aec0; /* Lighter grey */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+        }
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping for smaller screens */
+            justify-content: space-around;
+            background-color: #4a5568;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #cbd5e0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid #5a6478; /* Added a subtle border */
+        }
+        .status-bar span {
+            margin: 0.25rem 0.5rem; /* Add some margin for wrapping */
+            padding: 0.2rem 0.4rem; /* Added padding for better readability */
+            border-radius: 0.3rem; /* Slightly rounded corners for status items */
+            background-color: #3a4352; /* Slightly darker background for individual stats */
+        }
+        .game-output {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            height: 250px; /* Fixed height */
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        .game-button {
+            background-color: #4299e1; /* Blue */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease; /* Added box-shadow transition */
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            flex-grow: 1; /* Allow buttons to grow */
+            min-width: 120px; /* Minimum width for responsiveness */
+        }
+        .game-button:hover {
+            background-color: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4); /* Enhanced hover shadow */
+        }
+        .game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .game-button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .red-button {
+            background-color: #e53e3e; /* Red */
+        }
+        .red-button:hover {
+            background-color: #c53030;
+        }
+        .green-button {
+            background-color: #48bb78; /* Green */
+        }
+        .green-button:hover {
+            background-color: #38a169;
+        }
+        .inventory-list, .equipped-items-display {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 1rem;
+            color: #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            margin-top: 1rem; /* Add margin to separate from buttons */
+        }
+        .inventory-list ul, .equipped-items-display ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .inventory-list li:hover {
+            background-color: #3a4352; /* Subtle hover effect for list items */
+            border-radius: 0.5rem; /* Rounded corners on hover */
+        }
+        .inventory-list li:last-child, .equipped-items-display li:last-child {
+            border-bottom: none;
+        }
+        .inventory-list li button, .equipped-items-display li button {
+            background-color: #63b3ed; /* Light blue for equip/unequip */
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border: none;
+        }
+        .inventory-list li button:hover, .equipped-items-display li button:hover {
+            background-color: #4299e1;
+        }
+        /* Shop specific styles */
+        .shop-list {
+            background-color: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 1rem;
+            color: #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+            margin-top: 1rem;
+        }
+        .shop-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .shop-list li {
+            padding: 0.25rem 0;
+            border-bottom: 1px dashed #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+        .shop-list li:hover {
+            background-color: #3a4352;
+            border-radius: 0.5rem;
+        }
+        .shop-list li:last-child {
+            border-bottom: none;
+        }
+        .shop-list li button {
+            background-color: #48bb78; /* Green for Buy button */
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border: none;
+        }
+        .shop-list li button:hover {
+            background-color: #38a169;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #2d3748;
+            padding: 2rem;
+            border-radius: 1.0rem; /* Increased border-radius for modals */
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a5568;
+        }
+        .modal-content h2 {
+            font-size: 2rem;
+            color: #a0aec0;
+            margin-bottom: 1rem;
+        }
+        .modal-content p {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* CSS for combat buttons to ensure equal width */
+        .combat-button-equal-width {
+            width: calc((100% - (0.75rem * 2)) / 3); /* Calculate width for 3 items with 2 gaps */
+            flex-grow: 0; /* Do not grow beyond calculated width */
+            flex-shrink: 1; /* Allow shrinking if needed */
+            box-sizing: border-box; /* Include padding and border in the width */
+            min-width: 0; /* Override default min-width to allow shrinking to calculated size */
+        }
+
+        /* Health Bar Styles */
+        .health-bar-wrapper {
+            /* Make it take full width within status-bar for a dedicated line */
+            width: 100%;
+            margin: 0.5rem 0; /* More vertical margin for separation */
+            background-color: #3a4352; /* Darker background */
+            border-radius: 0.75rem; /* More rounded corners */
+            padding: 0.5rem; /* More padding around the bar */
+            position: relative; /* Crucial for absolute positioning of text and fill */
+            height: 2.5rem; /* Slightly taller for better visibility */
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3); /* Deeper shadow */
+            display: flex; /* Use flex to contain text and fill, though fill/text are absolute */
+            align-items: center; /* Vertically center text if not absolute */
+            justify-content: center; /* Horizontally center text if not absolute */
+            overflow: hidden; /* Hide overflow of fill and text if they go beyond */
+        }
+
+        .health-bar-container {
+            position: absolute; /* Position relative to wrapper */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #555; /* Darker background for empty part */
+            border-radius: 0.5rem; /* Match wrapper's inner rounding */
+            overflow: hidden; /* Ensure fill stays within bounds */
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(to right, #e53e3e, #c53030); /* Red gradient */
+            width: 100%; /* Initial width */
+            transition: width 0.5s ease-in-out; /* Smooth transition */
+            border-radius: 0.5rem;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4); /* Inner shadow for depth */
+        }
+
+        /* Removed .health-bar-text styles as the element is removed */
+    </style>
+</head>
+<body>
+    <div id="gameContainer" class="game-container">
+        <div class="header">
+            <h1>地監冒險</h1>
+        </div>
+
+        <div class="status-bar">
+            <!-- Health Bar Display -->
+            <div class="health-bar-wrapper">
+                <div id="playerHealthBarContainer" class="health-bar-container">
+                    <div id="playerHealthBarFill" class="health-bar-fill"></div>
+                </div>
+            </div>
+            
+            <span>金幣: <span id="playerGold"></span></span>
+            <span>攻擊力: <span id="playerAttack"></span></span>
+            <span>防禦力: <span id="playerDefense"></span></span>
+            <span>等級: <span id="playerLevel"></span></span> <!-- Added player level display -->
+            <span>經驗值: <span id="playerXP"></span>/<span id="playerXPToNextLevel"></span></span> <!-- Added player XP display -->
+            <span>樓層: <span id="currentFloor"></span></span>
+        </div>
+
+        <!-- Feature Bar -->
+        <div id="featureBar" class="flex justify-around p-2 rounded-lg bg-gray-700 mt-4 gap-2">
+            <button id="featureBtnInventory" class="game-button">背包</button>
+            <button id="featureBtnReturnToVillage" class="game-button">回村</button>
+        </div>
+
+        <div id="equippedItemsDisplay" class="equipped-items-display">
+            <h3 class="text-xl font-bold mb-2 text-center text-gray-300">
+                已裝備物品
+                <button id="toggleEquippedButton" class="text-sm px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors ml-2">展開</button>
+            </h3>
+            <div id="equippedListContainer" class="hidden">
+                <ul id="equippedList">
+                    <!-- Equipped items will be dynamically listed here -->
+                </ul>
+            </div>
+        </div>
+
+        <div id="gameOutput" class="game-output">
+            歡迎來到《地監冒險》！準備好你的冒險了嗎？
+        </div>
+
+        <div id="buttonGroup" class="button-group">
+            <!-- Buttons will be dynamically loaded here -->
+        </div>
+
+        <!-- Inventory Display -->
+        <div id="inventoryDisplay" class="inventory-list hidden">
+            <h3 class="text-xl font-bold mb-2 text-center text-gray-300">背包物品</h3>
+            <ul id="inventoryList">
+                <!-- Inventory items will be listed here -->
+            </ul>
+        </div>
+
+        <!-- Shop Display -->
+        <div id="shopDisplay" class="shop-list hidden">
+            <h3 class="text-xl font-bold mb-2 text-center text-gray-300">商店物品</h3>
+            <ul id="shopList">
+                <!-- Shop items will be listed here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>遊戲結束！</h2>
+            <p id="gameOverMessage"></p>
+            <button id="restartButton" class="game-button green-button">重新開始</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let player = {
+            hp: 100, // Initialize current HP
+            maxHp: 100,
+            baseGold: 0,
+            baseAttack: 10,
+            baseDefense: 0, // Base defense
+            level: 1, // New: Player level
+            xp: 0,    // New: Player current XP
+            xpToNextLevel: 100, // New: XP needed for next level
+            inventory: [],
+            equipped: {
+                head: null,
+                body: null,
+                legs: null,
+                rightHand: null, // For weapons
+                leftHand: null   // For shields
+            },
+            currentFloor: 1, // New: Current dungeon floor
+            explorationsOnFloor: 0 // New: Explorations on current floor
+        };
+
+        const MAX_DUNGEON_FLOOR = 7; // Maximum floor
+        const EXPLORATIONS_PER_FLOOR = 10; // How many explorations to advance a floor
+        const MONSTER_HP_SCALING = 0.2; // HP scales by 20% per floor
+        const MONSTER_ATTACK_SCALING = 0.1; // Attack scales by 10% per floor
+
+        let currentMonster = null;
+        let gamePhase = 'start'; // start, village, explore, combat, inventory, shop
+        let lastNonInventoryPhase = 'start'; // To store the phase before entering inventory/shop
+
+        // DOM Elements
+        const playerHealthBarFill = document.getElementById('playerHealthBarFill'); // New: Health bar fill element
+
+        const playerGoldSpan = document.getElementById('playerGold');
+        const playerAttackSpan = document.getElementById('playerAttack');
+        const playerDefenseSpan = document.getElementById('playerDefense');
+        const playerLevelSpan = document.getElementById('playerLevel'); // New: Player level span
+        const playerXPSpan = document.getElementById('playerXP');     // New: Player XP span
+        const playerXPToNextLevelSpan = document.getElementById('playerXPToNextLevel'); // New: Player XP to next level span
+        const currentFloorSpan = document.getElementById('currentFloor');
+        const equippedListUl = document.getElementById('equippedList');
+        const gameOutputDiv = document.getElementById('gameOutput');
+        const buttonGroupDiv = document.getElementById('buttonGroup');
+        const inventoryDisplayDiv = document.getElementById('inventoryDisplay');
+        const inventoryListUl = document.getElementById('inventoryList');
+        const shopDisplayDiv = document.getElementById('shopDisplay');
+        const shopListUl = document.getElementById('shopList');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const restartButton = document.getElementById('restartButton');
+
+        // New DOM elements for equipped items toggle
+        const toggleEquippedButton = document.getElementById('toggleEquippedButton');
+        const equippedListContainer = document.getElementById('equippedListContainer');
+
+        // New DOM elements for Feature Bar
+        const featureBar = document.getElementById('featureBar');
+        const featureBtnInventory = document.getElementById('featureBtnInventory');
+        const featureBtnReturnToVillage = document.getElementById('featureBtnReturnToVillage');
+
+
+        // Basic check for critical DOM elements to prevent "cannot start game" errors
+        if (!playerHealthBarFill || !playerGoldSpan || !playerAttackSpan || !playerDefenseSpan ||
+            !playerLevelSpan || !playerXPSpan || !playerXPToNextLevelSpan || // Added new elements to check
+            !currentFloorSpan || !equippedListUl || !gameOutputDiv || !buttonGroupDiv || !inventoryDisplayDiv ||
+            !inventoryListUl || !shopDisplayDiv || !shopListUl || !gameOverModal || !gameOverMessage ||
+            !restartButton || !toggleEquippedButton || !equippedListContainer ||
+            !featureBar || !featureBtnInventory || !featureBtnReturnToVillage) {
+            console.error("Critical DOM element(s) not found. Game cannot start. Please check HTML IDs.");
+            document.body.innerHTML = '<div style="color: red; text-align: center; margin-top: 50px; font-size: 1.5rem;">遊戲載入失敗：缺少必要的介面元素。請檢查程式碼中的 HTML ID 是否正確。</div>';
+            // Stop further script execution if critical elements are missing
+            throw new Error("Missing critical DOM elements.");
+        }
+
+
+        // Game Data
+        const monsters = {
+            // 一般怪物 - 古魯丁地監 1 樓
+            '妖魔': { name: '妖魔', level: 20, hp: 80, attack: 16, goldMin: 200, goldMax: 400, xpReward: 100, drops: [{ item: '紅色藥水', chance: 0.3 }, { item: '金幣', chance: 1 }] },
+            '妖魔弓箭手': { name: '妖魔弓箭手', level: 22, hp: 88, attack: 18, goldMin: 220, goldMax: 440, xpReward: 110, drops: [{ item: '短弓', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '妖魔鬥士': { name: '妖魔鬥士', level: 24, hp: 96, attack: 19, goldMin: 240, goldMax: 480, xpReward: 120, drops: [{ item: '巨斧', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '骷髏': { name: '骷髏', level: 20, hp: 80, attack: 16, goldMin: 200, goldMax: 400, xpReward: 100, drops: [{ item: '金幣', chance: 1 }] },
+            '骷髏弓箭手': { name: '骷髏弓箭手', level: 22, hp: 88, attack: 18, goldMin: 220, goldMax: 440, xpReward: 110, drops: [{ item: '短弓', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '人形殭屍': { name: '人形殭屍', level: 20, hp: 80, attack: 16, goldMin: 200, goldMax: 400, xpReward: 100, drops: [{ item: '紅色藥水', chance: 0.3 }, { item: '金幣', chance: 1 }] },
+            '史巴托': { name: '史巴托', level: 25, hp: 100, attack: 20, goldMin: 250, goldMax: 500, xpReward: 125, drops: [{ item: '皮甲', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            
+            // 一般怪物 - 古魯丁地監 2 樓
+            '骷髏斧手': { name: '骷髏斧手', level: 24, hp: 96, attack: 19, goldMin: 240, goldMax: 480, xpReward: 120, drops: [{ item: '巨斧', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '骷髏槍兵': { name: '骷髏槍兵', level: 25, hp: 100, attack: 20, goldMin: 250, goldMax: 500, xpReward: 125, drops: [{ item: '長劍', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '夏洛伯': { name: '夏洛伯', level: 28, hp: 112, attack: 22, goldMin: 280, goldMax: 560, xpReward: 140, drops: [{ item: '綠色藥水', chance: 0.3 }, { item: '金幣', chance: 1 }] },
+            '食屍鬼': { name: '食屍鬼', level: 30, hp: 120, attack: 24, goldMin: 300, goldMax: 600, xpReward: 150, drops: [{ item: '皮盔甲', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+            '楊果里恩': { name: '楊果里恩', level: 30, hp: 120, attack: 24, goldMin: 300, goldMax: 600, xpReward: 150, drops: [{ item: '金幣', chance: 1 }] },
+            '食人妖精': { name: '食人妖精', level: 32, hp: 128, attack: 25, goldMin: 320, goldMax: 640, xpReward: 160, drops: [{ item: '巨斧', chance: 0.1 }, { item: '藤甲', chance: 0.1 }, { item: '綠色藥水', chance: 0.4 }, { item: '金幣', chance: 1 }] },
+            
+            // 一般怪物 - 古魯丁地監 3 樓 (and higher)
+            '石頭高崙': { name: '石頭高崙', level: 35, hp: 140, attack: 28, goldMin: 350, goldMax: 700, xpReward: 175, drops: [{ item: '金幣', chance: 1 }] },
+            '地獄犬': { name: '地獄犬', level: 36, hp: 144, attack: 29, goldMin: 360, goldMax: 720, xpReward: 180, drops: [{ item: '巫杖', chance: 0.05 }, { item: '紅色藥水', chance: 0.5 }, { item: '金幣', chance: 1 }] },
+
+            // 新增一般怪物
+            '漂浮之眼': { name: '漂浮之眼', level: 42, hp: 168, attack: 34, goldMin: 420, goldMax: 840, xpReward: 210, drops: [{ item: '金幣', chance: 1 }] },
+            '食人妖精王': { name: '食人妖精王', level: 40, hp: 160, attack: 32, goldMin: 400, goldMax: 800, xpReward: 200, drops: [{ item: '鐵盔甲', chance: 0.05 }, { item: '勇敢藥水', chance: 0.1 }, { item: '金幣', chance: 1 }] },
+
+            // Boss級怪物 (levels and stats already adjusted in previous turn)
+            deathKnight: { name: '死亡騎士', level: 85, hp: 850, attack: 85, goldMin: 8000, goldMax: 20000, xpReward: 1000, drops: [{ item: '雙手劍', chance: 0.2 }, { item: '鐵盔甲', chance: 0.15 }, { item: '勇敢藥水', chance: 0.5 }, { item: '金幣', chance: 1 }] },
+            magician: { name: '魔法師', level: 42, hp: 420, attack: 42, goldMin: 2500, goldMax: 8000, xpReward: 500, drops: [{ item: '巫杖', chance: 0.3 }, { item: '法師帽', chance: 0.2 }, { item: '綠色藥水', chance: 0.5 }, { item: '瞬間移動卷軸', chance: 0.4 }, { item: '金幣', chance: 1 }] },
+            casper: { name: '卡士伯', level: 44, hp: 440, attack: 44, goldMin: 2700, goldMax: 8500, xpReward: 550, drops: [{ item: '精靈盾牌', chance: 0.2 }, { item: '法師帽', chance: 0.15 }, { item: '綠色藥水', chance: 0.5 }, { item: '金幣', chance: 1 }] },
+            markus: { name: '馬庫爾', level: 45, hp: 450, attack: 45, goldMin: 2800, goldMax: 9000, xpReward: 575, drops: [{ item: '米索莉短劍', chance: 0.25 }, { item: '鱗甲', chance: 0.2 }, { item: '瞬間移動卷軸', chance: 0.6 }, { item: '金幣', chance: 1 }] },
+            balser: { name: '巴土瑟', level: 43, hp: 430, attack: 43, goldMin: 2600, goldMax: 8200, xpReward: 525, drops: [{ item: '雙手劍', chance: 0.25 }, { item: '鐵盔甲', chance: 0.2 }, { item: '勇敢藥水', chance: 0.6 }, { item: '金幣', chance: 1 }] },
+            shima: { name: '西瑪', level: 42, hp: 420, attack: 45, goldMin: 2900, goldMax: 9000, xpReward: 500, drops: [{ item: '巫杖', chance: 0.25 }, { item: '鐵頭盔', chance: 0.2 }, { item: '精靈餅乾', chance: 0.6 }, { item: '金幣', chance: 1 }] }
+        };
+
+        const items = {
+            // 武器 (右手)
+            '巫杖': { type: 'weapon', slot: 'rightHand', sellPrice: 4500, attack: 8, defense: 0, effect: null },
+            '巨斧': { type: 'weapon', slot: 'rightHand', sellPrice: 385, attack: 5, defense: 0, effect: null },
+            '匕首': { type: 'weapon', slot: 'rightHand', sellPrice: 55, buyPrice: 150, attack: 3, defense: 0, effect: null },
+            '長劍': { type: 'weapon', slot: 'rightHand', sellPrice: 1500, attack: 7, defense: 0, effect: null },
+            '弓': { type: 'weapon', slot: 'rightHand', sellPrice: 25, attack: 4, defense: 0, effect: null },
+            '短弓': { type: 'weapon', slot: 'rightHand', sellPrice: 50, buyPrice: 120, attack: 4, defense: 0, effect: null },
+            '銀劍': { type: 'weapon', slot: 'rightHand', sellPrice: 900, attack: 6, defense: 0, effect: null },
+            '米索莉短劍': { type: 'weapon', slot: 'rightHand', sellPrice: 2500, attack: 5, defense: 0, effect: null },
+            '雙手劍': { type: 'weapon', slot: 'rightHand', sellPrice: 9000, attack: 12, defense: 0, effect: null },
+
+            // 防具 - 身體
+            '藤甲': { type: 'armor', slot: 'body', sellPrice: 1000, attack: 0, defense: 3, effect: null },
+            '皮甲': { type: 'armor', slot: 'body', sellPrice: 400, buyPrice: 800, attack: 0, defense: 2, effect: null },
+            '鱗甲': { type: 'armor', slot: 'body', sellPrice: 4000, attack: 0, defense: 4, effect: null },
+            '鐵盔甲': { type: 'armor', slot: 'body', sellPrice: 15000, attack: 0, defense: 6, effect: null },
+
+            // 防具 - 頭部
+            '皮盔甲': { type: 'armor', slot: 'head', sellPrice: 150, buyPrice: 400, attack: 0, defense: 1, effect: null },
+            '鐵頭盔': { type: 'armor', slot: 'head', sellPrice: 300, buyPrice: 750, attack: 0, defense: 2, effect: null },
+            '法師帽': { type: 'armor', slot: 'head', sellPrice: 100, buyPrice: 250, attack: 0, defense: 1, effect: null },
+
+            // 防具 - 腿部
+            '布褲': { type: 'armor', slot: 'legs', sellPrice: 20, buyPrice: 50, attack: 0, defense: 1, effect: null },
+            '鐵褲': { type: 'armor', slot: 'legs', sellPrice: 500, buyPrice: 1200, attack: 0, defense: 3, effect: null },
+            '皮靴': { type: 'armor', slot: 'legs', sellPrice: 80, buyPrice: 200, attack: 0, defense: 1, effect: null },
+
+            // 防具 - 左手 (盾牌)
+            '精靈盾牌': { type: 'armor', slot: 'leftHand', sellPrice: 2000, attack: 0, defense: 2, effect: null },
+            '木盾': { type: 'armor', slot: 'leftHand', sellPrice: 30, buyPrice: 80, attack: 0, defense: 1, effect: null },
+            '鋼鐵盾牌': { type: 'leftHand', sellPrice: 700, buyPrice: 1800, attack: 0, defense: 3, effect: null },
+
+            // 藥水和卷軸 (無裝備部位)
+            '紅色藥水': { type: 'potion', sellPrice: 20, buyPrice: 50, attack: 0, defense: 0, effect: { hp: 10 } },
+            '綠色藥水': { type: 'potion', sellPrice: 100, buyPrice: 200, attack: 0, defense: 0, effect: { hp: 5 } },
+            '瞬間移動卷軸': { type: 'scroll', sellPrice: 35, attack: 0, defense: 0, effect: { teleportToNextFloor: true } }, // Modified effect
+            '精靈餅乾': { type: 'potion', sellPrice: 50, buyPrice: 150, attack: 0, defense: 0, effect: { hp: 15 } },
+            '勇敢藥水': { type: 'potion', sellPrice: 400, buyPrice: 800, attack: 0, defense: 0, effect: { hp: 20 } },
+            '鑑定卷軸': { type: 'scroll', sellPrice: 25, buyPrice: 50, attack: 0, defense: 0, effect: null },
+            '變形卷軸': { type: 'scroll', sellPrice: 650, buyPrice: 1500, attack: 0, defense: 0, effect: null },
+            '傳送回家的卷軸': { type: 'scroll', sellPrice: 100, buyPrice: 250, attack: 0, defense: 0, effect: { teleportHome: true } }
+        };
+
+        // --- Game Functions ---
+
+        /**
+         * Helper function to get readable slot name for display.
+         * @param {string} slotKey - The internal key for the equipment slot (e.g., 'head', 'rightHand').
+         * @returns {string} The display name for the slot.
+         */
+        function getSlotName(slotKey) {
+            const slotNames = {
+                head: '頭部',
+                body: '身體',
+                legs: '腿部',
+                rightHand: '右手',
+                leftHand: '左手'
+            };
+            return slotNames[slotKey] || slotKey; // Fallback to key if not found
+        }
+
+        /**
+         * Calculates the player's current effective attack and defense based on base stats and equipped items.
+         */
+        function calculatePlayerStats() {
+            let totalAttack = player.baseAttack;
+            let totalDefense = player.baseDefense;
+
+            // Iterate through all equipped slots and sum up their stats
+            for (const slot in player.equipped) {
+                const itemName = player.equipped[slot];
+                if (itemName && items[itemName]) {
+                    totalAttack += items[itemName].attack || 0; // Add 0 if undefined
+                    totalDefense += items[itemName].defense || 0; // Add 0 if undefined
+                }
+            }
+
+            // Ensure stats don't go below zero if we ever add negative effects
+            player.currentAttack = Math.max(0, totalAttack);
+            player.currentDefense = Math.max(0, totalDefense);
+        }
+
+        /**
+         * Calculates the XP required for a given level.
+         * @param {number} level - The target level.
+         * @returns {number} The total XP required to reach the start of that level.
+         */
+        function getXpRequiredForLevel(level) {
+            // A simple linear progression for XP needed per level
+            // Level 1 -> 2 needs 100 XP
+            // Level 2 -> 3 needs 150 XP (100 + 50)
+            // Level 3 -> 4 needs 200 XP (150 + 50)
+            return Math.floor(100 + (level - 1) * 50);
+        }
+
+        /**
+         * Checks if the player has enough XP to level up and performs the level up.
+         */
+        function checkLevelUp() {
+            while (player.xp >= player.xpToNextLevel) {
+                player.level++;
+                player.xp -= player.xpToNextLevel; // Subtract the XP required for the just-completed level
+                player.xpToNextLevel = getXpRequiredForLevel(player.level); // Calculate XP for the new next level
+
+                // Increase player stats on level up
+                player.maxHp += 10;
+                player.baseAttack += 2;
+                player.baseDefense += 1;
+                player.hp = player.maxHp; // Full heal on level up
+
+                appendOutput(`恭喜！你升到了等級 ${player.level}！你的能力提升了！`);
+            }
+        }
+
+        /**
+         * Updates the player's status display and equipped items display.
+         */
+        function updateStatus() {
+            calculatePlayerStats(); // Recalculate stats before updating display
+            
+            // Update Health Bar
+            const hpPercentage = (player.hp / player.maxHp) * 100;
+            playerHealthBarFill.style.width = `${hpPercentage}%`;
+
+            playerGoldSpan.textContent = player.baseGold; // Display baseGold for consistency
+            playerAttackSpan.textContent = player.currentAttack;
+            playerDefenseSpan.textContent = player.currentDefense;
+            playerLevelSpan.textContent = player.level; // Update player level display
+            playerXPSpan.textContent = player.xp;     // Update player XP display
+            playerXPToNextLevelSpan.textContent = player.xpToNextLevel; // Update XP to next level display
+            currentFloorSpan.textContent = player.currentFloor; // Update floor display
+
+            // Update equipped items display for all slots
+            equippedListUl.innerHTML = ''; // Clear existing list
+
+            const slotOrder = ['head', 'body', 'legs', 'rightHand', 'leftHand']; // Define display order
+
+            slotOrder.forEach(slotKey => {
+                const listItem = document.createElement('li');
+                const equippedItemName = player.equipped[slotKey];
+                const slotDisplayName = getSlotName(slotKey);
+
+                let itemText = `${slotDisplayName}: `;
+                if (equippedItemName) {
+                    itemText += equippedItemName;
+                    const unequipButton = document.createElement('button');
+                    unequipButton.textContent = '卸下';
+                    unequipButton.onclick = () => unequipItem(slotKey);
+                    listItem.appendChild(document.createTextNode(itemText)); // Append text node first
+                    listItem.appendChild(unequipButton);
+                } else {
+                    itemText += '無';
+                    listItem.textContent = itemText;
+                }
+                equippedListUl.appendChild(listItem);
+            });
+
+            updateFeatureBarButtons(); // Update feature bar buttons whenever status updates
+        }
+
+        /**
+         * Appends a message to the game output area.
+         * @param {string} message - The message to display.
+         */
+        function appendOutput(message) {
+            gameOutputDiv.textContent += '\n' + message;
+            gameOutputDiv.scrollTop = gameOutputDiv.scrollHeight; // Auto-scroll to bottom
+        }
+
+        /**
+         * Sets the main game output message, clearing previous content.
+         * @param {string} message - The message to display.
+         */
+        function setOutput(message) {
+            gameOutputDiv.textContent = message;
+            gameOutputDiv.scrollTop = gameOutputDiv.scrollHeight;
+        }
+
+        /**
+         * Clears all buttons from the button group.
+         */
+        function clearButtons() {
+            buttonGroupDiv.innerHTML = '';
+        }
+
+        /**
+         * Creates and appends a button to the button group.
+         * @param {string} text - The text displayed on the button.
+         * @param {function} onClick - The function to call when the button is clicked.
+         * @param {string} [className='game-button'] - Additional CSS classes for the button.
+         */
+        function createButton(text, onClick, className = 'game-button') {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = className;
+            button.onclick = onClick;
+            buttonGroupDiv.appendChild(button);
+            return button;
+        }
+
+        /**
+         * Handles the game over state.
+         * @param {string} message - The message to display on game over.
+         */
+        function gameOver(message) {
+            gamePhase = 'game_over';
+            gameOverMessage.textContent = message;
+            gameOverModal.classList.remove('hidden');
+            clearButtons();
+            updateFeatureBarButtons(); // Disable feature bar buttons on game over
+        }
+
+        /**
+         * Restarts the game to its initial state.
+         */
+        function restartGame() {
+            player = {
+                hp: 100, // Reset current HP
+                maxHp: 100,
+                baseGold: 0,
+                baseAttack: 10,
+                baseDefense: 0,
+                level: 1, // Reset player level
+                xp: 0,    // Reset player XP
+                xpToNextLevel: getXpRequiredForLevel(1), // Reset XP needed for next level
+                inventory: [],
+                equipped: {
+                    head: null,
+                    body: null,
+                    legs: null,
+                    rightHand: null,
+                    leftHand: null
+                },
+                currentFloor: 1, // Reset floor
+                explorationsOnFloor: 0 // Reset explorations
+            };
+            currentMonster = null;
+            gamePhase = 'start';
+            lastNonInventoryPhase = 'start'; // Reset this as well
+            gameOverModal.classList.add('hidden');
+            inventoryDisplayDiv.classList.add('hidden');
+            shopDisplayDiv.classList.add('hidden'); // Hide shop display on restart
+            // Ensure equipped list container is hidden on restart
+            equippedListContainer.classList.add('hidden');
+            toggleEquippedButton.textContent = '展開'; // Reset button text
+            startGame();
+        }
+
+        // --- Feature Bar Functions ---
+        /**
+         * Toggles the visibility of the equipped items display.
+         */
+        function toggleEquippedDisplay() {
+            equippedListContainer.classList.toggle('hidden');
+            if (equippedListContainer.classList.contains('hidden')) {
+                toggleEquippedButton.textContent = '展開';
+            } else {
+                toggleEquippedButton.textContent = '收合';
+            }
+        }
+
+        /**
+         * Updates the enabled/disabled state of feature bar buttons based on current game phase.
+         */
+        function updateFeatureBarButtons() {
+            // Inventory button is generally always available, unless game over
+            featureBtnInventory.disabled = (gamePhase === 'game_over');
+            featureBtnInventory.onclick = () => showInventory(gamePhase); // Pass current phase as context
+
+            // Return to Village button available in explore/combat, disabled in village/start/game_over/combat
+            featureBtnReturnToVillage.disabled = (gamePhase === 'village' || gamePhase === 'start' || gamePhase === 'game_over' || gamePhase === 'combat');
+            featureBtnReturnToVillage.onclick = returnToVillage;
+        }
+
+
+        // --- Game Phases ---
+
+        /**
+         * Starts the game, showing the initial options.
+         */
+        function startGame() {
+            // Modified welcome message
+            setOutput('你已在木人場訓練升級到5級！準備好進入地監冒險了嗎?');
+            // Set player to level 5 and adjust stats accordingly
+            player.level = 5;
+            player.xp = 0; // Start with 0 XP at the beginning of level 5
+            player.xpToNextLevel = getXpRequiredForLevel(player.level);
+            player.maxHp = 100 + (player.level - 1) * 10; // Base 100 + 10 for each level after 1
+            player.baseAttack = 10 + (player.level - 1) * 2; // Base 10 + 2 for each level after 1
+            player.baseDefense = 0 + (player.level - 1) * 1; // Base 0 + 1 for each level after 1
+            player.hp = player.maxHp; // Full HP at start of level 5
+
+
+            clearButtons();
+            createButton('進入地監', enterDungeon);
+            updateStatus(); // This will also call updateFeatureBarButtons()
+        }
+
+        /**
+         * Enters the dungeon, setting the phase to explore.
+         */
+        function enterDungeon() {
+            gamePhase = 'explore';
+            setOutput(`你踏入了地監地下${player.currentFloor}層... 周圍一片漆黑，你感覺到危險潛伏著。`);
+            showExploreOptions();
+            updateFeatureBarButtons();
+        }
+
+        /**
+         * Displays options for exploration.
+         */
+        function showExploreOptions() {
+            // Hide shop and inventory if visible
+            shopDisplayDiv.classList.add('hidden');
+            inventoryDisplayDiv.classList.add('hidden');
+
+            clearButtons();
+            createButton('探索', exploreDungeon);
+            updateFeatureBarButtons(); // Ensure buttons are correctly enabled/disabled
+        }
+
+        /**
+         * Simulates exploring the dungeon, leading to encounters or findings.
+         */
+        function exploreDungeon() {
+            player.explorationsOnFloor++; // Increment exploration count
+
+            if (player.explorationsOnFloor >= EXPLORATIONS_PER_FLOOR) {
+                if (player.currentFloor < MAX_DUNGEON_FLOOR) {
+                    player.currentFloor++;
+                    player.explorationsOnFloor = 0;
+                    appendOutput(`你已深入地監，進入了地下${player.currentFloor}層！`);
+                } else {
+                    appendOutput('你已達到地監最深處！');
+                }
+            }
+
+            const rand = Math.random();
+            let monsterToEncounter = null;
+            let encounterType = 'nothing'; // 'monster', 'item', 'nothing'
+
+            // Define floor-specific monster pools
+            const floorMonsterPools = {
+                1: ['妖魔', '妖魔弓箭手', '妖魔鬥士', '骷髏', '骷髏弓箭手', '人形殭屍', '史巴托'],
+                2: ['人形殭屍', '骷髏斧手', '骷髏弓箭手', '骷髏槍兵', '史巴托', '夏洛伯', '食屍鬼', '楊果里恩', '食人妖精'],
+                3: ['人形殭屍', '骷髏斧手', '骷髏弓箭手', '骷髏槍兵', '史巴托', '夏洛伯', '食屍鬼', '楊果里恩', '食人妖精', '石頭高崙'],
+                4: ['人形殭屍', '骷髏斧手', '骷髏弓箭手', '骷髏槍兵', '史巴托', '夏洛伯', '食屍鬼', '楊果里恩', '食人妖精', '石頭高崙', '地獄犬'],
+                5: ['夏洛伯', '骷髏弓箭手', '骷髏槍兵', '楊果里恩', '食屍鬼', '食人妖精', '地獄犬'],
+                6: ['漂浮之眼', '史巴托', '食屍鬼', '食人妖精', '食人妖精王', '地獄犬'],
+                7: ['食人妖精', '食人妖精王', '食屍鬼', '楊果里恩', '地獄犬']
+            };
+
+            const currentFloorRegularMonsters = floorMonsterPools[player.currentFloor] || [];
+
+            // Boss encounter chance (10%)
+            if (rand < 0.10) {
+                let bossKeys = [];
+                if (player.currentFloor >= 3 && player.currentFloor <= 4) {
+                    bossKeys = ['balser', 'casper', 'markus', 'shima'];
+                } else if (player.currentFloor >= 6 && player.currentFloor <= 7) {
+                    bossKeys = ['deathKnight', 'magician'];
+                }
+
+                if (bossKeys.length > 0) {
+                    const randomBossKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
+                    monsterToEncounter = monsters[randomBossKey];
+                    encounterType = 'monster';
+                }
+            }
+
+            // If no boss, try for a regular monster (if available on this floor)
+            if (!monsterToEncounter && currentFloorRegularMonsters.length > 0) {
+                if (rand >= 0.10 && rand < 0.70) { // 60% chance for regular monster
+                    const randomRegularMonsterKey = currentFloorRegularMonsters[Math.floor(Math.random() * currentFloorRegularMonsters.length)];
+                    monsterToEncounter = monsters[randomRegularMonsterKey];
+                    encounterType = 'monster';
+                }
+            }
+            
+            // If still no monster, try for item or nothing
+            if (!monsterToEncounter) {
+                if (rand >= 0.10 && rand < 0.10 + 0.20) { // 20% chance to find item (original 0.70-0.90 shifted to 0.10-0.30)
+                    encounterType = 'item';
+                } else { // 70% chance nothing happens (original 0.90-1.00 + the 0.10-0.70 range)
+                    encounterType = 'nothing';
+                }
+            }
+
+            // Execute based on encounterType
+            if (encounterType === 'monster') {
+                currentMonster = { ...monsters[monsterToEncounter.name] }; // Get base stats from monsters object
+                // Scale monster HP and Attack based on current floor
+                currentMonster.hp = Math.round(currentMonster.hp * (1 + (player.currentFloor - 1) * MONSTER_HP_SCALING));
+                currentMonster.attack = Math.round(currentMonster.attack * (1 + (player.currentFloor - 1) * MONSTER_ATTACK_SCALING));
+                currentMonster.xpReward = monsterToEncounter.xpReward; // Set XP reward
+                currentMonster.goldMin = monsterToEncounter.goldMin; // Ensure gold range is copied
+                currentMonster.goldMax = monsterToEncounter.goldMax;
+                currentMonster.drops = monsterToEncounter.drops; // Ensure drops are copied
+
+                currentMonster.hp = Math.max(1, currentMonster.hp);
+                currentMonster.attack = Math.max(1, currentMonster.attack);
+
+
+                setOutput(`你遇到了一隻${currentMonster.name} (Lv.${currentMonster.level}, 地下${player.currentFloor}層)！`); // Display monster level and floor
+                gamePhase = 'combat';
+                showCombatOptions();
+            } else if (encounterType === 'item') {
+                findItem();
+                showExploreOptions();
+            } else { // 'nothing'
+                appendOutput('你繼續探索，但什麼也沒發現...');
+                showExploreOptions();
+            }
+            updateStatus(); // Update status after exploration (for floor/exploration count)
+        }
+
+        /**
+         * Handles finding an item during exploration.
+         */
+        function findItem() {
+            const possibleItems = [
+                '紅色藥水', '綠色藥水', '瞬間移動卷軸', '巫杖', '巨斧', '藤甲', '精靈餅乾',
+                '匕首', '長劍', '弓', '皮盔甲', '皮甲',
+                '短弓', '銀劍', '米索莉短劍', '雙手劍', '鱗甲', '鐵盔甲', '精靈盾牌',
+                '勇敢藥水', '鑑定卷軸', '變形卷軸',
+                '鐵頭盔', '法師帽', '布褲', '鐵褲', '皮靴', '木盾', '鋼鐵盾牌',
+                '傳送回家的卷軸'
+            ];
+            const foundItemName = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+            player.inventory.push(foundItemName);
+            appendOutput(`你找到了一個 ${foundItemName}！`);
+        }
+
+        /**
+         * Displays combat options.
+         */
+        function showCombatOptions() {
+            // Hide shop and inventory if visible
+            shopDisplayDiv.classList.add('hidden');
+            inventoryDisplayDiv.classList.add('hidden');
+
+            clearButtons();
+            // Apply the new combat-button-equal-width class
+            createButton('攻擊', playerAttack, 'red-button combat-button-equal-width');
+            createButton('逃跑', runAway, 'game-button combat-button-equal-width');
+            createButton('背包 (戰鬥中)', () => showInventory('combat'), 'game-button combat-button-equal-width');
+            updateFeatureBarButtons(); // Ensure buttons are correctly enabled/disabled
+        }
+
+        /**
+         * Player attacks the current monster.
+         */
+        function playerAttack() {
+            if (!currentMonster) return;
+
+            // Player attacks
+            const playerDamage = player.currentAttack + Math.floor(Math.random() * 5); // Use currentAttack
+            currentMonster.hp -= playerDamage;
+            appendOutput(`你對 ${currentMonster.name} 造成了 ${playerDamage} 點傷害！`);
+
+            if (currentMonster.hp <= 0) {
+                appendOutput(`${currentMonster.name} (Lv.${currentMonster.level}, 地下${player.currentFloor}層) 被你擊敗了！`); // Display monster level on defeat
+                handleMonsterDefeat();
+                return;
+            }
+
+            // Monster attacks
+            // Monster damage reduced by player's current defense
+            let monsterDamage = currentMonster.attack + Math.floor(Math.random() * 3) - player.currentDefense;
+            monsterDamage = Math.max(1, monsterDamage); // Ensure at least 1 damage
+            player.hp -= monsterDamage;
+            appendOutput(`${currentMonster.name} 對你造成了 ${monsterDamage} 點傷害！`);
+            updateStatus();
+
+            if (player.hp <= 0) {
+                gameOver('你的生命值歸零了。你倒在了地監深處...');
+            }
+        }
+
+        /**
+         * Handles monster defeat, including gold and item drops and XP gain.
+         */
+        function handleMonsterDefeat() {
+            const goldEarned = Math.floor(Math.random() * (currentMonster.goldMax - currentMonster.goldMin + 1)) + currentMonster.goldMin;
+            player.baseGold += goldEarned;
+            appendOutput(`你從 ${currentMonster.name} 身上獲得了 ${goldEarned} 金幣！`);
+
+            // Gain XP
+            player.xp += currentMonster.xpReward;
+            appendOutput(`你獲得了 ${currentMonster.xpReward} 經驗值！`);
+            checkLevelUp(); // Check for level up after gaining XP
+
+            // Handle item drops
+            currentMonster.drops.forEach(drop => {
+                if (Math.random() < drop.chance) {
+                    if (drop.item === '金幣') {
+                        // Gold is already handled, this is just for specific gold drops from monster's drop table if any
+                    } else {
+                        player.inventory.push(drop.item);
+                        appendOutput(`你獲得了 ${drop.item}！`);
+                    }
+                }
+            });
+
+            currentMonster = null;
+            gamePhase = 'explore';
+            showExploreOptions();
+            updateStatus();
+        }
+
+        /**
+         * Player attempts to run away from combat.
+         */
+        function runAway() {
+            const successChance = 0.5; // 50% chance to run away
+            if (Math.random() < successChance) {
+                setOutput('你成功逃跑了！');
+                currentMonster = null;
+                gamePhase = 'explore';
+                showExploreOptions();
+            } else {
+                appendOutput('你嘗試逃跑，但失敗了！');
+                // Monster gets a free attack
+                let monsterDamage = currentMonster.attack + Math.floor(Math.random() * 3) - player.currentDefense;
+                monsterDamage = Math.max(1, monsterDamage); // Ensure at least 1 damage
+                player.hp -= monsterDamage;
+                appendOutput(`${currentMonster.name} 對你造成了 ${monsterDamage} 點傷害！`);
+                updateStatus();
+                if (player.hp <= 0) {
+                    gameOver('你的生命值歸零了。你倒在了地監深處...');
+                }
+            }
+        }
+
+        /**
+         * Returns to the village.
+         */
+        function returnToVillage() {
+            gamePhase = 'village';
+            setOutput('你回到了村莊，這裡感覺安全多了。');
+            // Reset floor progress when returning to village
+            player.currentFloor = 1;
+            player.explorationsOnFloor = 0;
+            showVillageOptions();
+            updateStatus(); // Update status to reflect floor reset and feature bar buttons
+        }
+
+        /**
+         * Displays village options.
+         */
+        function showVillageOptions() {
+            // Hide shop and inventory if visible
+            shopDisplayDiv.classList.add('hidden');
+            inventoryDisplayDiv.classList.add('hidden');
+
+            clearButtons();
+            createButton('休息 (恢復生命)', restInVillage);
+            createButton('商店', showShopOptions); // Shop button now here
+            createButton('繼續冒險', enterDungeon);
+            updateFeatureBarButtons(); // Ensure buttons are correctly enabled/disabled
+        }
+
+        /**
+         * Rests in the village, restoring HP.
+         */
+        function restInVillage() {
+            const healAmount = player.maxHp - player.hp;
+            if (healAmount > 0) {
+                player.hp = player.maxHp;
+                appendOutput(`你在村莊休息，生命值完全恢復了！ (+${healAmount} HP)`);
+                updateStatus();
+            } else {
+                appendOutput('你的生命值已經是滿的了，不需要休息。');
+            }
+            showVillageOptions();
+        }
+
+        /**
+         * Displays the inventory and allows selling/equipping items.
+         * @param {string} [context] - The phase from which inventory was opened (e.g., 'explore', 'village', 'combat').
+         * If provided, it explicitly sets lastNonInventoryPhase.
+         * If not provided (e.g., internal refresh after equip/use), lastNonInventoryPhase is NOT updated.
+         */
+        function showInventory(context) {
+            // Hide shop display
+            shopDisplayDiv.classList.add('hidden');
+
+            // Only update lastNonInventoryPhase if a context is explicitly provided,
+            // meaning we are entering inventory from a different game phase.
+            if (context) {
+                lastNonInventoryPhase = context;
+                gamePhase = 'inventory'; // Set current phase to inventory only when explicitly entering
+            }
+            // If context is NOT provided, it means this is an internal refresh,
+            // so gamePhase and lastNonInventoryPhase should remain as they were.
+
+            inventoryDisplayDiv.classList.remove('hidden');
+            inventoryListUl.innerHTML = ''; // Clear previous list
+
+            if (player.inventory.length === 0) {
+                inventoryListUl.innerHTML = '<li class="text-center text-gray-400">背包是空的。</li>';
+            } else {
+                const itemCounts = {};
+                player.inventory.forEach(item => {
+                    itemCounts[item] = (itemCounts[item] || 0) + 1;
+                });
+
+                for (const itemName in itemCounts) {
+                    const listItem = document.createElement('li');
+                    const itemData = items[itemName];
+                    let itemInfo = `${itemName} x${itemCounts[itemName]}`;
+
+                    if (itemData) {
+                        if (itemData.attack > 0) itemInfo += ` (攻擊力 +${itemData.attack})`;
+                        if (itemData.defense > 0) itemInfo += ` (防禦力 +${itemData.defense})`;
+                        if (itemData.effect && itemData.effect.hp) itemInfo += ` (恢復HP +${itemData.effect.hp})`;
+                        // Display slot information if it's an equippable item
+                        if (itemData.slot) itemInfo += ` [部位: ${getSlotName(itemData.slot)}]`;
+                    }
+
+                    listItem.textContent = itemInfo;
+
+                    // Add equip button if it's a weapon or armor (now based on slot existence)
+                    if (itemData && itemData.slot) { // If it has a slot, it's equippable
+                        const equipButton = document.createElement('button');
+                        equipButton.textContent = '裝備';
+                        equipButton.onclick = () => equipItem(itemName);
+                        listItem.appendChild(equipButton);
+                    } else if (itemData && (itemData.type === 'potion' || itemData.type === 'scroll')) { // Potions and scrolls are "useable"
+                        const useButton = document.createElement('button');
+                        useButton.textContent = '使用';
+                        useButton.onclick = () => useItem(itemName);
+                        listItem.appendChild(useButton);
+                    }
+
+                    inventoryListUl.appendChild(listItem);
+                }
+            }
+
+            updateStatus(); // Update status to reflect any changes from previous actions
+            updateFeatureBarButtons(); // Ensure feature bar buttons reflect inventory context
+
+            clearButtons();
+            // The "返回" button now uses lastNonInventoryPhase to determine where to go
+            createButton('返回', () => {
+                inventoryDisplayDiv.classList.add('hidden'); // Hide inventory
+                if (lastNonInventoryPhase === 'explore') {
+                    showExploreOptions();
+                } else if (lastNonInventoryPhase === 'village') {
+                    showVillageOptions();
+                } else if (lastNonInventoryPhase === 'combat') { // If it was combat, return to combat options
+                    showCombatOptions();
+                } else if (lastNonInventoryPhase === 'shop') { // If it was shop, return to shop options
+                    showShopOptions();
+                }
+                // Reset gamePhase to the phase we are returning to
+                gamePhase = lastNonInventoryPhase;
+                updateFeatureBarButtons(); // Update feature bar buttons after returning
+            });
+        }
+
+        /**
+         * Equips an item from the inventory.
+         * @param {string} itemName - The name of the item to equip.
+         */
+        function equipItem(itemName) {
+            const itemData = items[itemName];
+            if (!itemData) {
+                appendOutput(`錯誤：找不到物品 ${itemName} 的資料。`);
+                return;
+            }
+
+            const slot = itemData.slot; // Get the intended slot from item data
+
+            if (!slot) { // If item doesn't have a slot, it's not equippable in these defined slots
+                appendOutput(`${itemName} 無法裝備到指定部位。`);
+                return;
+            }
+
+            if (player.equipped[slot]) { // If something is already equipped in this slot
+                player.inventory.push(player.equipped[slot]); // Put old item back to inventory
+                appendOutput(`你卸下了 ${player.equipped[slot]}，並將其放回背包。`);
+            }
+
+            player.equipped[slot] = itemName; // Equip the new item
+            // Remove from inventory
+            const index = player.inventory.indexOf(itemName);
+            if (index > -1) {
+                player.inventory.splice(index, 1);
+            }
+            appendOutput(`你裝備了 ${itemName} 到 ${getSlotName(slot)}！`); // Use a helper for slot name
+
+            updateStatus();
+            showInventory(); // Refresh inventory display without changing context
+        }
+
+        /**
+         * Unequips an item from a specific slot.
+         * @param {string} slotKey - The key of the slot to unequip (e.g., 'head', 'rightHand').
+         */
+        function unequipItem(slotKey) {
+            const equippedItemName = player.equipped[slotKey];
+            if (equippedItemName) {
+                player.inventory.push(equippedItemName); // Add item back to inventory
+                player.equipped[slotKey] = null; // Set slot to null
+                appendOutput(`你從 ${getSlotName(slotKey)} 卸下了 ${equippedItemName}，並將其放回背包。`);
+            } else {
+                appendOutput(`${getSlotName(slotKey)} 沒有裝備任何物品。`);
+            }
+            updateStatus(); // Refresh status and equipped display
+            // If inventory is open, refresh it to show the unequipped item
+            if (gamePhase === 'inventory') {
+                showInventory();
+            }
+        }
+
+
+        /**
+         * Uses a potion or scroll item from the inventory.
+         * @param {string} itemName - The name of the potion/scroll to use.
+         */
+        function useItem(itemName) {
+            const itemData = items[itemName];
+            if (!itemData || (itemData.type !== 'potion' && itemData.type !== 'scroll')) {
+                appendOutput(`錯誤：${itemName} 不是可使用的物品。`);
+                return;
+            }
+
+            // Handle potion effects
+            if (itemData.type === 'potion' && itemData.effect && itemData.effect.hp) {
+                if (player.hp === player.maxHp) {
+                    appendOutput(`你的生命值已滿，無法使用 ${itemName}。`);
+                    return;
+                }
+                const healAmount = itemData.effect.hp;
+                player.hp = Math.min(player.maxHp, player.hp + healAmount);
+                appendOutput(`你使用了 ${itemName}，恢復了 ${healAmount} 點生命值！`);
+            }
+            // Handle scroll effects
+            else if (itemData.type === 'scroll') {
+                if (itemData.effect && itemData.effect.teleportToNextFloor) { // New: Teleport to next floor
+                    if (player.currentFloor < MAX_DUNGEON_FLOOR) {
+                        player.currentFloor++;
+                        player.explorationsOnFloor = 0; // Reset explorations on new floor
+                        appendOutput(`你使用了 ${itemName}！一道光芒閃過，你被傳送到地下${player.currentFloor}層！`);
+
+                        // Remove item from inventory
+                        const index = player.inventory.indexOf(itemName);
+                        if (index > -1) {
+                            player.inventory.splice(index, 1);
+                        }
+                        updateStatus(); // Update status to reflect new floor
+                        showExploreOptions(); // Return to explore options on new floor
+                        return; // Exit function
+                    } else {
+                        appendOutput('你已經在地監最深處了，無法再向下傳送。');
+                        // Do not consume item if unable to teleport
+                        updateStatus(); // Just update status, no phase change
+                        showInventory(); // Refresh inventory to show item still there
+                        return; // Exit function
+                    }
+                } else if (itemData.effect && itemData.effect.teleportHome) { // Original: Teleport home
+                    appendOutput(`你使用了 ${itemName}！一道光芒閃過，你被傳送回了村莊。`);
+                    // Remove item from inventory before teleporting
+                    const index = player.inventory.indexOf(itemName);
+                    if (index > -1) {
+                        player.inventory.splice(index, 1);
+                    }
+                    updateStatus(); // Update status before returning to village
+                    returnToVillage(); // Teleport to village
+                    return; // Exit function after teleporting
+                } else {
+                    appendOutput(`你使用了 ${itemName}，但什麼也沒發生。`); // Generic message for other scrolls
+                }
+            }
+
+            // Remove item from inventory (for potions and other scrolls that were successfully used)
+            const index = player.inventory.indexOf(itemName);
+            if (index > -1) {
+                player.inventory.splice(index, 1);
+            }
+            updateStatus();
+
+            // Return to appropriate phase
+            if (lastNonInventoryPhase === 'combat') {
+                inventoryDisplayDiv.classList.add('hidden'); // Hide inventory
+                showCombatOptions(); // Return to combat options
+                gamePhase = 'combat'; // Ensure game phase is set back to combat
+            } else if (lastNonInventoryPhase === 'shop') { // If used from shop, return to shop
+                showShopOptions();
+            }
+            else {
+                showInventory(); // Refresh inventory display to show item removed without changing context
+            }
+            updateFeatureBarButtons(); // Ensure feature bar buttons reflect item usage
+        }
+
+        /**
+         * Sells all sellable items in the inventory.
+         */
+        function sellItems() {
+            if (player.inventory.length === 0) {
+                appendOutput('你的背包是空的，沒有東西可以賣。');
+                showShopOptions(); // Return to shop after message
+                return;
+            }
+
+            let totalSoldGold = 0;
+            const itemsToKeep = [];
+            const soldItemsSummary = {};
+
+            player.inventory.forEach(itemName => {
+                const itemData = items[itemName];
+                if (itemData && itemData.sellPrice) {
+                    totalSoldGold += itemData.sellPrice;
+                    soldItemsSummary[itemName] = (soldItemsSummary[itemName] || 0) + 1;
+                } else {
+                    itemsToKeep.push(itemName); // Keep items that are not sellable or have no price
+                }
+            });
+
+            if (totalSoldGold > 0) {
+                player.baseGold += totalSoldGold; // Update baseGold
+                player.inventory = itemsToKeep; // Update inventory to only contain kept items
+
+                let summaryMessage = '你賣掉了以下物品：\n';
+                for (const item in soldItemsSummary) {
+                    summaryMessage += `- ${item} x${soldItemsSummary[item]}\n`;
+                }
+                summaryMessage += `總共獲得了 ${totalSoldGold} 金幣！`;
+                appendOutput(summaryMessage);
+            } else {
+                appendOutput('你的背包裡沒有可以賣的物品。');
+            }
+
+            updateStatus();
+            showShopOptions(); // Refresh shop display after selling
+            inventoryDisplayDiv.classList.add('hidden'); // Hide inventory after selling
+            updateFeatureBarButtons(); // Ensure feature bar buttons reflect selling
+        }
+
+        /**
+         * Displays the shop interface with items for sale.
+         */
+        function showShopOptions() {
+            gamePhase = 'shop'; // Set current phase to shop
+            setOutput('歡迎來到商店！你想要買什麼？');
+            shopDisplayDiv.classList.remove('hidden');
+            inventoryDisplayDiv.classList.add('hidden'); // Hide inventory if open
+            shopListUl.innerHTML = ''; // Clear previous list
+
+            let shopItemsCount = 0;
+            for (const itemName in items) {
+                const itemData = items[itemName];
+                // Only show items that have a buyPrice AND a slot (for equippable items) or are potions/scrolls
+                if (itemData.buyPrice && (itemData.slot || itemData.type === 'potion' || itemData.type === 'scroll')) {
+                    shopItemsCount++;
+                    const listItem = document.createElement('li');
+                    let itemInfo = `${itemName} (購買價格: ${itemData.buyPrice} 金幣)`;
+
+                    if (itemData.attack > 0) itemInfo += ` (攻擊力 +${itemData.attack})`;
+                    if (itemData.defense > 0) itemInfo += ` (防禦力 +${itemData.defense})`;
+                    if (itemData.effect && itemData.effect.hp) itemInfo += ` (恢復HP +${itemData.effect.hp})`;
+                    if (itemData.slot) itemInfo += ` [部位: ${getSlotName(itemData.slot)}]`; // Display slot in shop
+
+                    listItem.textContent = itemInfo;
+
+                    const buyButton = document.createElement('button');
+                    buyButton.textContent = '購買';
+                    buyButton.onclick = () => buyItem(itemName);
+                    listItem.appendChild(buyButton);
+                    shopListUl.appendChild(listItem);
+                }
+            }
+
+            if (shopItemsCount === 0) {
+                shopListUl.innerHTML = '<li class="text-center text-gray-400">商店目前沒有物品出售。</li>';
+            }
+
+            updateStatus(); // Update gold display
+            updateFeatureBarButtons(); // Ensure feature bar buttons reflect shop context
+
+            clearButtons();
+            createButton('販賣物品', sellItems); // Moved here: Sell button now inside shop
+            createButton('離開商店', returnToVillage);
+        }
+
+        /**
+         * Handles buying an item from the shop.
+         * @param {string} itemName - The name of the item to buy.
+         */
+        function buyItem(itemName) {
+            const itemData = items[itemName];
+            if (!itemData || !itemData.buyPrice) {
+                appendOutput(`錯誤：${itemName} 無法購買。`);
+                return;
+            }
+
+            if (player.baseGold >= itemData.buyPrice) {
+                player.baseGold -= itemData.buyPrice;
+                player.inventory.push(itemName);
+                appendOutput(`你花費了 ${itemData.buyPrice} 金幣購買了 ${itemName}！`);
+            } else {
+                appendOutput(`你的金幣不足，無法購買 ${itemName}。你需要 ${itemData.buyPrice} 金幣。`);
+            }
+            updateStatus();
+            showShopOptions(); // Refresh shop display after purchase attempt
+        }
+
+
+        // --- Event Listeners ---
+        restartButton.addEventListener('click', restartGame);
+        toggleEquippedButton.addEventListener('click', toggleEquippedDisplay);
+
+        // --- Initial Game Setup ---
+        window.onload = function() {
+            try {
+                // Initialize XP to next level for level 1
+                player.xpToNextLevel = getXpRequiredForLevel(player.level);
+                startGame();
+            } catch (error) {
+                console.error("Error during game initialization:", error);
+                document.body.innerHTML = '<div style="color: red; text-align: center; margin-top: 50px; font-size: 1.5rem;">遊戲啟動失敗：發生錯誤。請檢查瀏覽器控制台以獲取更多詳細資訊。</div>';
+            }
+        };
+
+    </script>
+</body>
+</html>

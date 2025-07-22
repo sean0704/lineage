@@ -30,7 +30,7 @@
             flex-direction: column;
             gap: 0.75rem; 
         }
-        .header h1 {
+        .header h2 {
             font-size: 2rem; 
             font-weight: 700;
             color: #a0aec0;
@@ -39,28 +39,40 @@
         .status-bar {
             display: flex;
             flex-wrap: wrap;
-            justify-content: center; /* MODIFIED: Centered the single item */
+            justify-content: center;
             background-color: #4a5568;
-            padding: 0.25rem; /* MODIFIED: Reduced padding */
+            padding: 0.25rem;
             border-radius: 0.75rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #cbd5e0;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
             border: 1px solid #5a6478;
         }
-        .status-bar span {
-            margin: 0.25rem 0.5rem;
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.3rem;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .stat-item {
             background-color: #3a4352;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .stat-item .value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #e2e8f0;
+        }
+        .stat-item .label {
+            font-size: 0.8rem;
+            color: #a0aec0;
         }
         .game-output {
             background-color: #1a202c;
             border: 1px solid #4a5568;
             border-radius: 0.75rem;
             padding: 1rem;
-            height: 250px;
+            height: 125px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
@@ -190,13 +202,39 @@
             <h2>地監冒險</h2>
         </div>
 
-        <!-- MODIFIED: Simplified the status bar -->
         <div class="status-bar">
             <div class="health-bar-wrapper">
                 <div id="playerHealthBarContainer" class="health-bar-container">
                     <div id="playerHealthBarFill" class="health-bar-fill"></div>
                 </div>
                 <div id="playerHealthText" class="health-bar-text"></div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div id="playerGold" class="value"></div>
+                <div class="label">金幣</div>
+            </div>
+            <div class="stat-item">
+                <div id="playerAttack" class="value"></div>
+                <div class="label">攻擊力</div>
+            </div>
+            <div class="stat-item">
+                <div id="playerDefense" class="value"></div>
+                <div class="label">防禦力</div>
+            </div>
+            <div class="stat-item">
+                <div id="playerLevel" class="value"></div>
+                <div class="label">等級</div>
+            </div>
+            <div class="stat-item">
+                <div id="playerXP" class="value"></div>
+                <div class="label">經驗值</div>
+            </div>
+            <div class="stat-item">
+                <div id="currentFloor" class="value"></div>
+                <div class="label">樓層</div>
             </div>
         </div>
 
@@ -257,7 +295,7 @@
             player: null,
             currentMonster: null,
             gamePhase: 'start',
-            lastNonInventoryPhase: 'start',
+            lastMajorPhase: 'start',
         },
 
         // --- 3. Game Data ---
@@ -278,9 +316,9 @@
         },
 
         cacheDOMElements() {
-            // MODIFIED: Removed IDs for stats that are no longer displayed in the status bar
             const ids = [
-                'playerHealthBarFill', 'playerHealthText', 'equippedList',
+                'playerHealthBarFill', 'playerHealthText', 'equippedList', 'playerGold', 'playerAttack',
+                'playerDefense', 'playerLevel', 'playerXP', 'currentFloor',
                 'gameOutput', 'buttonGroup', 'inventoryDisplay', 'shopDisplay', 'gameOverModal',
                 'gameOverMessage', 'restartButton', 'toggleEquippedButton', 'equippedListContainer',
                 'featureBtnInventory', 'featureBtnReturnToVillage', 'equipConfirmModal', 'equipModalTitle',
@@ -429,14 +467,12 @@
             this.DOM.playerHealthBarFill.style.width = `${hpPercentage}%`;
             this.DOM.playerHealthText.textContent = `${p.hp} / ${p.maxHp}`;
             
-            // The following elements are removed, so we don't update them.
-            // this.DOM.playerGold.textContent = p.gold;
-            // this.DOM.playerAttack.textContent = stats.attack;
-            // this.DOM.playerDefense.textContent = stats.defense;
-            // this.DOM.playerLevel.textContent = p.level;
-            // this.DOM.playerXP.textContent = p.xp;
-            // this.DOM.playerXPToNextLevel.textContent = p.xpToNextLevel;
-            // this.DOM.currentFloor.textContent = p.currentFloor;
+            this.DOM.playerGold.textContent = p.gold;
+            this.DOM.playerAttack.textContent = stats.attack;
+            this.DOM.playerDefense.textContent = stats.defense;
+            this.DOM.playerLevel.textContent = p.level;
+            this.DOM.playerXP.textContent = `${p.xp} / ${p.xpToNextLevel}`;
+            this.DOM.currentFloor.textContent = p.currentFloor;
 
             this.renderEquippedItems();
         },
@@ -479,8 +515,9 @@
 
         updateFeatureBar() {
             const phase = this.state.gamePhase;
-            this.DOM.featureBtnInventory.disabled = (phase === 'game_over');
-            this.DOM.featureBtnReturnToVillage.disabled = (phase === 'village' || phase === 'start' || phase === 'game_over' || phase === 'combat');
+            const isSubMenu = phase === 'inventory' || phase === 'shop';
+            this.DOM.featureBtnInventory.disabled = (phase === 'game_over' || isSubMenu);
+            this.DOM.featureBtnReturnToVillage.disabled = (phase === 'village' || phase === 'start' || phase === 'game_over' || phase === 'combat' || isSubMenu);
         },
 
         toggleEquippedDisplay() {
@@ -568,7 +605,7 @@
             this.renderButtons([
                 { text: '攻擊', action: () => this.playerAttack(), className: 'game-button red-button' },
                 { text: '逃跑', action: () => this.runAway() },
-                { text: '背包 (戰鬥中)', action: () => this.showInventory('combat') },
+                { text: '背包 (戰鬥中)', action: () => this.showInventory() },
             ]);
         },
 
@@ -684,19 +721,15 @@
         },
 
         // --- 8. Inventory, Shop, Items ---
-        showInventory(context) {
-            // If context is provided (e.g., 'combat'), use it. 
-            // Otherwise, save the current phase before switching.
-            this.state.lastNonInventoryPhase = context || this.state.gamePhase;
+        showInventory() {
+            this.state.lastMajorPhase = this.state.gamePhase;
             this.state.gamePhase = 'inventory';
-
             this.DOM.shopDisplay.classList.add('hidden');
             this.DOM.inventoryDisplay.classList.remove('hidden');
             this.DOM.inventoryDisplay.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center text-gray-300">背包物品</h3><ul id="inventoryListUl"></ul>`;
-            
             this.renderInventory();
             this.renderButtons([{ text: '返回', action: () => this.closeSubmenu() }]);
-            this.updateFeatureBar();
+            this.updateUI();
         },
 
         renderInventory() {
@@ -741,13 +774,14 @@
         },
 
         showShop() {
+            this.state.lastMajorPhase = this.state.gamePhase;
             this.state.gamePhase = 'shop';
             this.setOutput('歡迎來到商店！');
             this.DOM.shopDisplay.classList.remove('hidden');
             this.DOM.shopDisplay.innerHTML = `<h3 class="text-xl font-bold mb-2 text-center text-gray-300">商店 / 販賣</h3><ul id="shopListUl"></ul>`;
             this.renderShop();
-            this.renderButtons([{ text: '離開商店', action: () => this.setPhase('village') }]);
-            this.updateFeatureBar();
+            this.renderButtons([{ text: '離開商店', action: () => this.closeSubmenu() }]);
+            this.updateUI();
         },
 
         renderShop() {
@@ -788,7 +822,7 @@
         },
 
         closeSubmenu() {
-            this.setPhase(this.state.lastNonInventoryPhase);
+            this.setPhase(this.state.lastMajorPhase);
         },
 
         showEquipConfirmation(itemKeyToEquip) {
@@ -837,8 +871,10 @@
             
             this.appendOutput(`你裝備了 ${itemData.name}。`);
             this.DOM.equipConfirmModal.classList.add('hidden');
-            this.updateStatus();
-            this.renderInventory(); // Refresh inventory list
+            this.updateUI();
+            if (this.state.gamePhase === 'inventory') {
+                this.renderInventory();
+            }
         },
 
         unequipItem(slotKey) {
@@ -847,7 +883,7 @@
                 this.state.player.inventory.push(itemKey);
                 this.state.player.equipped[slotKey] = null;
                 this.appendOutput(`你卸下了 ${this.data.items[itemKey].name}。`);
-                this.updateStatus();
+                this.updateUI();
             }
         },
 
@@ -874,7 +910,7 @@
             if (used) {
                 const index = this.state.player.inventory.indexOf(itemKey);
                 if (index > -1) this.state.player.inventory.splice(index, 1);
-                this.updateStatus();
+                this.updateUI();
                 if(this.state.gamePhase === 'inventory') this.renderInventory();
             }
         },
@@ -882,18 +918,14 @@
         buyItem(itemKey) {
             const itemData = this.data.items[itemKey];
             if (!itemData || typeof itemData.buy !== 'number') {
-                console.error(`buyItem: Invalid item data for key: ${itemKey}`);
                 return;
             }
 
-            const playerGold = Number(this.state.player.gold);
-            const itemPrice = Number(itemData.buy);
-
-            if (playerGold >= itemPrice) {
-                this.state.player.gold = playerGold - itemPrice;
+            if (this.state.player.gold >= itemData.buy) {
+                this.state.player.gold -= itemData.buy;
                 this.state.player.inventory.push(itemKey);
                 this.appendOutput(`你購買了 ${itemData.name}。`);
-                this.updateStatus();
+                this.updateUI();
                 this.renderShop();
             } else {
                 this.appendOutput('金幣不足！');
@@ -907,7 +939,7 @@
                 this.state.player.inventory.splice(index, 1);
                 this.state.player.gold += itemData.sell;
                 this.appendOutput(`你賣掉了 ${itemData.name}，獲得 ${itemData.sell} 金幣。`);
-                this.updateStatus();
+                this.updateUI();
                 this.renderShop();
             }
         },

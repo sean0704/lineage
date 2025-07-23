@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>地監冒險 (優化版)</title>
+    <title>地監冒險 (含商店功能)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* General Body and Container Styles */
         body {
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
             background-color: #1a202c;
@@ -36,143 +37,22 @@
             color: #a0aec0;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
         }
+
+        /* Status, Stats, and Health Bar */
         .status-bar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            background-color: #4a5568;
-            padding: 0.25rem;
-            border-radius: 0.75rem;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-            border: 1px solid #5a6478;
+            display: flex; flex-wrap: wrap; justify-content: center;
+            background-color: #4a5568; padding: 0.25rem; border-radius: 0.75rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3); border: 1px solid #5a6478;
         }
         .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            text-align: center;
-            font-size: 0.9rem;
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem; text-align: center; font-size: 0.9rem;
         }
         .stat-item {
-            background-color: #3a4352;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
+            background-color: #3a4352; padding: 0.5rem; border-radius: 0.5rem;
         }
-        .stat-item .value {
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #e2e8f0;
-        }
-        .stat-item .label {
-            font-size: 0.8rem;
-            color: #a0aec0;
-        }
-        .game-output {
-            background-color: #1a202c;
-            border: 1px solid #4a5568;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            height: 125px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 1rem;
-            line-height: 1.5;
-            color: #e2e8f0;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .button-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            justify-content: center;
-        }
-        .game-button {
-            background-color: #4299e1;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            flex-grow: 1;
-            min-width: 120px;
-        }
-        .game-button:hover {
-            background-color: #3182ce;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
-        }
-        .game-button:disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        .red-button { background-color: #e53e3e; }
-        .red-button:hover { background-color: #c53030; }
-        .green-button { background-color: #48bb78; }
-        .green-button:hover { background-color: #38a169; }
-        .gray-button { background-color: #718096; }
-        .gray-button:hover { background-color: #4a5568; }
-
-        .list-container {
-            background-color: #1a202c;
-            border: 1px solid #4a5568;
-            border-radius: 0.75rem;
-            padding: 1rem;
-            max-height: 250px;
-            overflow-y: auto;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-            margin-top: 1rem;
-        }
-        .list-container ul { list-style: none; padding: 0; margin: 0; }
-        .list-container li {
-            padding: 0.5rem;
-            border-bottom: 1px dashed #4a5568;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background-color 0.2s ease;
-        }
-        .list-container li:hover { background-color: #3a4352; border-radius: 0.5rem; }
-        .list-container li:last-child { border-bottom: none; }
-        .list-container li .item-name { flex-grow: 1; }
-        .list-container li .item-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
-        .list-container li button {
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            border: none;
-        }
-        .equip-btn { background-color: #63b3ed; }
-        .equip-btn:hover { background-color: #4299e1; }
-        .use-btn { background-color: #a0aec0; }
-        .use-btn:hover { background-color: #718096; }
-        
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: flex; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-content {
-            background-color: #2d3748; padding: 2rem; border-radius: 1.0rem;
-            text-align: center; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
-            border: 2px solid #4a5568; max-width: 90%; width: 500px;
-        }
-        .modal-content h2 { font-size: 2rem; color: #a0aec0; margin-bottom: 1rem; }
-        .modal-content p { font-size: 1.2rem; margin-bottom: 1.5rem; }
-        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left; margin-bottom: 1.5rem; }
-        .comparison-grid h3 { font-weight: bold; color: #718096; border-bottom: 1px solid #4a5568; padding-bottom: 0.5rem; }
-        .stat-change-loss { color: #f56565; }
-        .stat-change-gain { color: #48bb78; }
-
+        .stat-item .value { font-weight: 700; font-size: 1.1rem; color: #e2e8f0; }
+        .stat-item .label { font-size: 0.8rem; color: #a0aec0; }
         .health-bar-wrapper {
             width: 100%; margin: 0.5rem 0; background-color: #3a4352;
             border-radius: 0.75rem; padding: 0.5rem; position: relative;
@@ -190,14 +70,99 @@
         .health-bar-text {
             position: absolute; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;
         }
+
+        /* Game Output & Buttons */
+        .game-output {
+            background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.75rem;
+            padding: 1rem; height: 125px; overflow-y: auto; white-space: pre-wrap;
+            word-wrap: break-word; font-size: 1rem; line-height: 1.5; color: #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .button-group {
+            display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center;
+        }
+        .game-button {
+            background-color: #4299e1; color: white; padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem; font-size: 1.1rem; font-weight: 700;
+            cursor: pointer; transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            flex-grow: 1; min-width: 120px;
+        }
+        .game-button:hover {
+            background-color: #3182ce; transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+        }
+        .game-button:disabled {
+            background-color: #a0aec0; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        .red-button { background-color: #e53e3e; } .red-button:hover { background-color: #c53030; }
+        .green-button { background-color: #48bb78; } .green-button:hover { background-color: #38a169; }
+        .gray-button { background-color: #718096; } .gray-button:hover { background-color: #4a5568; }
+
+        /* List & Item Styles (Inventory, Equipped, Shop) */
+        .list-container {
+            background-color: #1a202c; border: 1px solid #4a5568; border-radius: 0.75rem;
+            padding: 1rem; max-height: 250px; overflow-y: auto;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3); margin-top: 1rem;
+        }
+        .list-container ul { list-style: none; padding: 0; margin: 0; }
+        .list-container li {
+            padding: 0.5rem; border-bottom: 1px dashed #4a5568; display: flex;
+            justify-content: space-between; align-items: center; transition: background-color 0.2s ease;
+        }
+        .list-container li:hover { background-color: #3a4352; border-radius: 0.5rem; }
+        .list-container li:last-child { border-bottom: none; }
+        .list-container li .item-name { flex-grow: 1; }
+        .list-container li .item-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+        .list-container li button, .shop-action-btn {
+            color: white; padding: 0.25rem 0.75rem; border-radius: 0.5rem;
+            font-size: 0.9rem; cursor: pointer; transition: background-color 0.2s ease; border: none;
+        }
+        .equip-btn { background-color: #63b3ed; } .equip-btn:hover { background-color: #4299e1; }
+        .use-btn { background-color: #a0aec0; } .use-btn:hover { background-color: #718096; }
+
+        /* Modal Styles (Game Over, Equip, Shop) */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background-color: #2d3748; padding: 2rem; border-radius: 1.0rem;
+            text-align: center; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a5568; max-width: 90%; width: 500px;
+        }
+        .modal-content h2 { font-size: 2rem; color: #a0aec0; margin-bottom: 1rem; }
+        .modal-content p { font-size: 1.2rem; margin-bottom: 1.5rem; }
+        
+        /* Equip Confirmation Modal */
+        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left; margin-bottom: 1.5rem; }
+        .comparison-grid h3 { font-weight: bold; color: #718096; border-bottom: 1px solid #4a5568; padding-bottom: 0.5rem; }
+        .stat-change-loss { color: #f56565; }
+        .stat-change-gain { color: #48bb78; }
+        
+        /* Shop Modal Styles */
+        .shop-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #4a5568; }
+        .shop-tab {
+            padding: 0.75rem 1.5rem; border-radius: 0.5rem 0.5rem 0 0; background-color: #4a5568;
+            cursor: pointer; transition: background-color 0.2s; font-weight: bold;
+        }
+        .shop-tab.active { background-color: #3a4352; color: #e2e8f0; }
+        .shop-item-list { max-height: 300px; overflow-y: auto; text-align: left; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem; border-bottom: 1px dashed #4a5568; }
+        .shop-item:last-child { border-bottom: none; }
+        .shop-item-info { flex-grow: 1; }
+        .shop-item-name { font-weight: bold; }
+        .shop-item-price { color: #f6e05e; }
+        .buy-btn { background-color: #48bb78; } .buy-btn:hover:not(:disabled) { background-color: #38a169; }
+        .sell-btn { background-color: #f6e05e; color: #1a202c; } .sell-btn:hover { background-color: #ecc94b; }
+        .shop-action-btn:disabled { background-color: #718096; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div id="gameContainer" class="game-container">
-        <div class="header text-center mb-1"> 
-            <h2>地監冒險</h2>
-        </div>
-
+        <!-- Header and Health Bar -->
+        <div class="header text-center mb-1"><h2>地監冒險</h2></div>
         <div class="status-bar">
             <div class="health-bar-wrapper">
                 <div id="playerHealthBarContainer" class="health-bar-container">
@@ -207,49 +172,33 @@
             </div>
         </div>
 
+        <!-- Game Output and Action Buttons -->
         <div id="gameOutput" class="game-output"></div>
         <div id="buttonGroup" class="button-group"></div>
         <div id="inventoryDisplay" class="list-container hidden"></div>
         
+        <!-- Player Stats Grid -->
         <div class="stats-grid mt-4">
-            <div class="stat-item">
-                <div id="playerGold" class="value"></div>
-                <div class="label">金幣</div>
-            </div>
-            <div class="stat-item">
-                <div id="playerAttack" class="value"></div>
-                <div class="label">攻擊力</div>
-            </div>
-            <div class="stat-item">
-                <div id="playerDefense" class="value"></div>
-                <div class="label">防禦力</div>
-            </div>
-            <div class="stat-item">
-                <div id="playerLevel" class="value"></div>
-                <div class="label">等級</div>
-            </div>
-            <div class="stat-item">
-                <div id="playerXP" class="value"></div>
-                <div class="label">經驗值</div>
-            </div>
-            <div class="stat-item">
-                <div id="currentFloor" class="value"></div>
-                <div class="label">樓層</div>
-            </div>
+            <div class="stat-item"><div id="playerGold" class="value"></div><div class="label">金幣</div></div>
+            <div class="stat-item"><div id="playerAttack" class="value"></div><div class="label">攻擊力</div></div>
+            <div class="stat-item"><div id="playerDefense" class="value"></div><div class="label">防禦力</div></div>
+            <div class="stat-item"><div id="playerLevel" class="value"></div><div class="label">等級</div></div>
+            <div class="stat-item"><div id="playerXP" class="value"></div><div class="label">經驗值</div></div>
+            <div class="stat-item"><div id="currentFloor" class="value"></div><div class="label">樓層</div></div>
         </div>
 
+        <!-- Equipped Items Display -->
         <div id="equippedItemsDisplay" class="list-container">
             <h3 class="text-xl font-bold mb-2 text-center text-gray-300">
                 已裝備物品
                 <button id="toggleEquippedButton" class="text-sm px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 transition-colors ml-2">展開</button>
             </h3>
-            <div id="equippedListContainer" class="hidden">
-                <ul id="equippedList"></ul>
-            </div>
+            <div id="equippedListContainer" class="hidden"><ul id="equippedList"></ul></div>
         </div>
     </div>
 
-    <!-- Modals -->
+    <!-- MODALS SECTION -->
+    <!-- Game Over Modal -->
     <div id="gameOverModal" class="modal hidden">
         <div class="modal-content">
             <h2>遊戲結束！</h2>
@@ -257,6 +206,8 @@
             <button id="restartButton" class="game-button green-button">重新開始</button>
         </div>
     </div>
+
+    <!-- Equip Confirmation Modal -->
     <div id="equipConfirmModal" class="modal hidden">
         <div class="modal-content">
             <h2 id="equipModalTitle">確認裝備</h2>
@@ -265,6 +216,19 @@
                 <button id="confirmEquipButton" class="game-button green-button">確認</button>
                 <button id="cancelEquipButton" class="game-button gray-button">取消</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Shop Modal -->
+    <div id="shopModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>商店</h2>
+            <div class="shop-tabs">
+                <div id="buyTab" class="shop-tab active" onclick="Game.renderShop('buy')">購買</div>
+                <div id="sellTab" class="shop-tab" onclick="Game.renderShop('sell')">販賣</div>
+            </div>
+            <div id="shopItemList" class="shop-item-list"></div>
+            <button id="closeShopButton" class="game-button gray-button mt-6">離開商店</button>
         </div>
     </div>
 
@@ -277,6 +241,7 @@
             EXPLORATIONS_PER_FLOOR: 10,
             MONSTER_HP_SCALING: 0.2,
             MONSTER_ATTACK_SCALING: 0.1,
+            SHOP_BUY_PRICE_MULTIPLIER: 2,
         },
 
         // --- 2. Game State ---
@@ -285,6 +250,7 @@
             currentMonster: null,
             gamePhase: 'start',
             lastMajorPhase: 'start',
+            currentShopTab: 'buy',
         },
 
         // --- 3. Game Data ---
@@ -292,6 +258,10 @@
             monsters: {},
             items: {},
             floorMonsterPools: {},
+            shopInventory: [
+                'redPotion', 'greenPotion', 'bravePotion', 'teleportHomeScroll',
+                'dagger', 'woodenShield', 'leatherHelm', 'leatherArmor', 'shortBow'
+            ],
         },
 
         // --- 4. Core Methods ---
@@ -308,8 +278,8 @@
                 'playerDefense', 'playerLevel', 'playerXP', 'currentFloor',
                 'gameOutput', 'buttonGroup', 'inventoryDisplay', 'gameOverModal',
                 'gameOverMessage', 'restartButton', 'toggleEquippedButton', 'equippedListContainer',
-                'equipConfirmModal', 'equipModalTitle',
-                'equipComparison', 'confirmEquipButton', 'cancelEquipButton'
+                'equipConfirmModal', 'equipModalTitle', 'equipComparison', 'confirmEquipButton', 'cancelEquipButton',
+                'shopModal', 'buyTab', 'sellTab', 'shopItemList', 'closeShopButton' // New shop elements
             ];
             ids.forEach(id => {
                 const el = document.getElementById(id);
@@ -319,6 +289,7 @@
         },
         
         loadData() {
+            // (Item and monster data remains the same as the original file)
             this.data.items = {
                 // Common
                 'dagger': { name: '匕首', type: 'weapon', slot: 'rightHand', sell: 55, attack: 3, defense: 0, rarity: 'common' },
@@ -386,6 +357,7 @@
             this.DOM.restartButton.addEventListener('click', () => this.resetGame());
             this.DOM.toggleEquippedButton.addEventListener('click', () => this.toggleEquippedDisplay());
             this.DOM.cancelEquipButton.addEventListener('click', () => this.DOM.equipConfirmModal.classList.add('hidden'));
+            this.DOM.closeShopButton.addEventListener('click', () => this.closeShop()); // New shop event
         },
 
         // --- 5. Game State Management ---
@@ -485,6 +457,7 @@
                 case 'village': this.showVillageOptions(); break;
                 case 'explore': this.showExploreOptions(); break;
                 case 'combat': this.showCombatOptions(); break;
+                case 'shop': this.showShop(); break; // Handle shop phase
             }
             this.updateUI();
         },
@@ -502,6 +475,7 @@
             this.setOutput('你回到了村莊，這裡感覺安全多了。');
             this.renderButtons([
                 { text: '繼續冒險', action: () => this.enterDungeon() },
+                { text: '商店', action: () => { this.state.lastMajorPhase = 'village'; this.setPhase('shop'); } },
                 { text: '背包', action: () => this.showInventory() },
                 { text: '休息', action: () => this.restInVillage() },
             ]);
@@ -566,7 +540,7 @@
             const m = this.state.currentMonster;
             const playerStats = this.calculatePlayerStats();
 
-            const playerDamage = Math.max(1, playerStats.attack - Math.floor(m.level / 5)); // Simple damage formula
+            const playerDamage = Math.max(1, playerStats.attack - Math.floor(m.level / 5));
             m.hp -= playerDamage;
             this.appendOutput(`你對 ${m.name} 造成了 ${playerDamage} 點傷害！ (怪物剩餘HP: ${m.hp > 0 ? m.hp : 0})`);
 
@@ -671,7 +645,7 @@
             this.updateUI();
         },
 
-        // --- 8. Inventory, Items ---
+        // --- 8. Inventory, Items, Equipment ---
         showInventory() {
             this.state.lastMajorPhase = this.state.gamePhase;
             this.state.gamePhase = 'inventory';
@@ -815,7 +789,112 @@
             }
         },
 
-        // --- 9. Helper Functions ---
+        // --- 9. Shop Functionality ---
+        showShop() {
+            this.DOM.shopModal.classList.remove('hidden');
+            this.renderButtons([]);
+            this.renderShop(this.state.currentShopTab);
+        },
+        
+        closeShop() {
+            this.DOM.shopModal.classList.add('hidden');
+            this.setPhase(this.state.lastMajorPhase);
+        },
+
+        renderShop(tab) {
+            this.state.currentShopTab = tab;
+            this.DOM.buyTab.classList.toggle('active', tab === 'buy');
+            this.DOM.sellTab.classList.toggle('active', tab === 'sell');
+
+            if (tab === 'buy') {
+                this.renderShopBuyList();
+            } else {
+                this.renderShopSellList();
+            }
+        },
+
+        renderShopBuyList() {
+            const listEl = this.DOM.shopItemList;
+            listEl.innerHTML = '';
+            this.data.shopInventory.forEach(itemKey => {
+                const itemData = this.data.items[itemKey];
+                if (!itemData) return;
+
+                const buyPrice = itemData.sell * this.CONSTANTS.SHOP_BUY_PRICE_MULTIPLIER;
+                const canAfford = this.state.player.gold >= buyPrice;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shop-item';
+                itemDiv.innerHTML = `
+                    <div class="shop-item-info">
+                        <div class="shop-item-name">${this.getFormattedItemName(itemKey)}</div>
+                        <div class="shop-item-price">價格: ${buyPrice} 金幣</div>
+                    </div>
+                    <button class="shop-action-btn buy-btn" onclick="Game.buyItem('${itemKey}')" ${canAfford ? '' : 'disabled'}>購買</button>
+                `;
+                listEl.appendChild(itemDiv);
+            });
+        },
+
+        renderShopSellList() {
+            const listEl = this.DOM.shopItemList;
+            listEl.innerHTML = '';
+
+            const itemCounts = this.state.player.inventory.reduce((acc, key) => {
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
+
+            if (Object.keys(itemCounts).length === 0) {
+                listEl.innerHTML = '<div class="text-center text-gray-400 p-4">你的背包是空的。</div>';
+                return;
+            }
+
+            for (const itemKey in itemCounts) {
+                const itemData = this.data.items[itemKey];
+                if (!itemData || !itemData.sell) continue;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shop-item';
+                itemDiv.innerHTML = `
+                    <div class="shop-item-info">
+                        <div class="shop-item-name">${this.getFormattedItemName(itemKey)} (x${itemCounts[itemKey]})</div>
+                        <div class="shop-item-price">售價: ${itemData.sell} 金幣</div>
+                    </div>
+                    <button class="shop-action-btn sell-btn" onclick="Game.sellItem('${itemKey}')">販賣</button>
+                `;
+                listEl.appendChild(itemDiv);
+            }
+        },
+
+        buyItem(itemKey) {
+            const itemData = this.data.items[itemKey];
+            const buyPrice = itemData.sell * this.CONSTANTS.SHOP_BUY_PRICE_MULTIPLIER;
+            if (this.state.player.gold >= buyPrice) {
+                this.state.player.gold -= buyPrice;
+                this.state.player.inventory.push(itemKey);
+                this.appendOutput(`你購買了 ${itemData.name}。`);
+                this.updateUI();
+                this.renderShop('buy'); // Re-render to update button states
+            } else {
+                this.appendOutput('你的金幣不足！');
+            }
+        },
+
+        sellItem(itemKey) {
+            const itemData = this.data.items[itemKey];
+            const index = this.state.player.inventory.indexOf(itemKey);
+
+            if (index > -1) {
+                this.state.player.inventory.splice(index, 1);
+                this.state.player.gold += itemData.sell;
+                this.appendOutput(`你賣掉了 ${itemData.name}，獲得了 ${itemData.sell} 金幣。`);
+                this.updateUI();
+                this.renderShop('sell'); // Re-render the sell list
+            }
+        },
+
+        // --- 10. Helper Functions ---
         getFormattedItemName(itemKey) {
             const itemData = this.data.items[itemKey];
             if (!itemData) return '';

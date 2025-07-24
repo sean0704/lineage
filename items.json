@@ -1,0 +1,23 @@
+{
+    "dagger": { "name": "匕首", "type": "weapon", "slot": "rightHand", "sell": 55, "attack": 3, "defense": 0, "rarity": "common" },
+    "shortBow": { "name": "短弓", "type": "weapon", "slot": "rightHand", "sell": 50, "attack": 4, "defense": 0, "rarity": "common" },
+    "woodenShield": { "name": "木盾", "type": "armor", "slot": "leftHand", "sell": 30, "defense": 1, "rarity": "common" },
+    "leatherHelm": { "name": "皮盔甲", "type": "armor", "slot": "head", "sell": 150, "defense": 1, "rarity": "common" },
+    "leatherArmor": { "name": "皮甲", "type": "armor", "slot": "body", "sell": 400, "defense": 2, "rarity": "common" },
+    "mageHat": { "name": "法師帽", "type": "armor", "slot": "head", "sell": 100, "defense": 1, "rarity": "common" },
+    "greatAxe": { "name": "巨斧", "type": "weapon", "slot": "rightHand", "sell": 385, "attack": 5, "defense": 0, "rarity": "uncommon" },
+    "longSword": { "name": "長劍", "type": "weapon", "slot": "rightHand", "sell": 1500, "attack": 7, "defense": 0, "rarity": "uncommon" },
+    "mithrilDagger": { "name": "米索莉短劍", "type": "weapon", "slot": "rightHand", "sell": 2500, "attack": 5, "defense": 0, "rarity": "rare" },
+    "wizardStaff": { "name": "巫杖", "type": "weapon", "slot": "rightHand", "sell": 4500, "attack": 8, "defense": 0, "rarity": "rare" },
+    "vineArmor": { "name": "藤甲", "type": "armor", "slot": "body", "sell": 1000, "defense": 3, "rarity": "uncommon" },
+    "elvenShield": { "name": "精靈盾牌", "type": "armor", "slot": "leftHand", "sell": 2000, "defense": 2, "rarity": "rare" },
+    "ironHelm": { "name": "鐵頭盔", "type": "armor", "slot": "head", "sell": 300, "defense": 2, "rarity": "uncommon" },
+    "scaleMail": { "name": "鱗甲", "type": "armor", "slot": "body", "sell": 4000, "defense": 4, "rarity": "rare" },
+    "twoHandedSword": { "name": "雙手劍", "type": "weapon", "slot": "rightHand", "sell": 9000, "attack": 12, "defense": 0, "rarity": "legendary" },
+    "ironArmor": { "name": "鐵盔甲", "type": "armor", "slot": "body", "sell": 15000, "defense": 6, "rarity": "legendary" },
+    "redPotion": { "name": "紅色藥水", "type": "potion", "sell": 20, "effect": { "type": "heal", "amount": 30 } },
+    "greenPotion": { "name": "綠色藥水", "type": "potion", "sell": 100, "effect": { "type": "heal", "amount": 50 } },
+    "bravePotion": { "name": "勇敢藥水", "type": "potion", "sell": 400, "effect": { "type": "heal", "amount": 75 } },
+    "elvenWafer": { "name": "精靈餅乾", "type": "potion", "sell": 50, "effect": { "type": "heal", "amount": 40 } },
+    "teleportHomeScroll": { "name": "傳送回家的卷軸", "type": "scroll", "sell": 100, "effect": { "type": "teleportHome" } }
+}

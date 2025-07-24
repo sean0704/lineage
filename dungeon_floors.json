@@ -1,0 +1,9 @@
+{
+    "1": ["goblin", "goblinArcher", "goblinFighter", "skeleton", "skeletonArcher", "zombie", "sparto"],
+    "2": ["zombie", "skeletonAxeman", "skeletonArcher", "skeletonSpearman", "sparto", "shelob", "ghoul", "ungoliant", "ogre"],
+    "3": ["zombie", "skeletonAxeman", "skeletonArcher", "skeletonSpearman", "sparto", "shelob", "ghoul", "ungoliant", "ogre", "stoneGolem", "sima", "balthazar", "markus", "casper"],
+    "4": ["zombie", "skeletonAxeman", "skeletonArcher", "skeletonSpearman", "sparto", "shelob", "ghoul", "ungoliant", "ogre", "stoneGolem", "cerberus", "sima", "balthazar", "markus", "casper"],
+    "5": ["shelob", "skeletonArcher", "skeletonSpearman", "ungoliant", "ghoul", "ogre", "cerberus", "deathKnight"],
+    "6": ["floatingEye", "sparto", "ghoul", "ogre", "ogreKing", "cerberus", "deathKnight"],
+    "7": ["ogre", "ogreKing", "ghoul", "ungoliant", "casper", "markus", "cerberus", "deathKnight"]
+}

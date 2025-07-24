@@ -252,19 +252,8 @@
         data: {
             monsters: {},
             items: {},
-            floorMonsterPools: {
-                1: ['goblin', 'goblinArcher', 'goblinFighter', 'skeleton', 'skeletonArcher', 'zombie', 'sparto'],
-                2: ['zombie', 'skeletonAxeman', 'skeletonArcher', 'skeletonSpearman', 'sparto', 'shelob', 'ghoul', 'ungoliant', 'ogre'],
-                3: ['zombie', 'skeletonAxeman', 'skeletonArcher', 'skeletonSpearman', 'sparto', 'shelob', 'ghoul', 'ungoliant', 'ogre', 'stoneGolem'],
-                4: ['zombie', 'skeletonAxeman', 'skeletonArcher', 'skeletonSpearman', 'sparto', 'shelob', 'ghoul', 'ungoliant', 'ogre', 'stoneGolem', 'cerberus'],
-                5: ['shelob', 'skeletonArcher', 'skeletonSpearman', 'ungoliant', 'ghoul', 'ogre', 'cerberus'],
-                6: ['floatingEye', 'sparto', 'ghoul', 'ogre', 'ogreKing', 'cerberus', 'sima'],
-                7: ['ogre', 'ogreKing', 'balthazar', 'ghoul', 'ungoliant', 'sima', 'casper', 'markus', 'cerberus']
-            },
-            shopInventory: [
-                'redPotion', 'greenPotion', 'bravePotion', 'teleportHomeScroll',
-                'dagger', 'woodenShield', 'leatherHelm', 'leatherArmor', 'shortBow'
-            ],
+            floorMonsterPools: {},
+            shopInventory: [],
         },
 
         // **修改**：初始化流程改為 async/await 模式
@@ -300,24 +289,32 @@
         async loadData() {
             try {
                 // 並行發出所有資料請求
-                const [monsterResponse, itemResponse] = await Promise.all([
+                const [monsterResponse, itemResponse, floorResponse, shopResponse] = await Promise.all([
                     fetch('monsters.json'),
-                    fetch('items.json')
+                    fetch('items.json'),
+                    fetch('dungeon_floors.json'),
+                    fetch('shop.json')
                 ]);
 
                 // 檢查所有回應是否成功
                 if (!monsterResponse.ok) throw new Error('無法載入 monsters.json');
                 if (!itemResponse.ok) throw new Error('無法載入 items.json');
+                if (!floorResponse.ok) throw new Error('無法載入 dungeon_floors.json');
+                if (!shopResponse.ok) throw new Error('無法載入 shop.json');
 
                 // 並行解析 JSON 資料
-                const [monsterData, itemData] = await Promise.all([
+                const [monsterData, itemData, floorData, shopData] = await Promise.all([
                     monsterResponse.json(),
-                    itemResponse.json()
+                    itemResponse.json(),
+                    floorResponse.json(),
+                    shopResponse.json()
                 ]);
 
                 // 將資料存入 Game 物件
                 this.data.monsters = monsterData;
                 this.data.items = itemData;
+                this.data.floorMonsterPools = floorData;
+                this.data.shopInventory = shopData;
 
             } catch (error) {
                 // 統一處理任何載入或解析錯誤

@@ -473,7 +473,7 @@
                 this.setOutput(encounterMessage, true);
                 this.setPhase('combat');
             } else if (rand < 0.75) {
-                this.findItem();
+                this.findChest(); // Replaced findItem()
                 this.setPhase('explore');
             } else {
                 this.appendOutput('你繼續探索，但什麼也沒發現...');
@@ -482,11 +482,91 @@
             this.updateUI();
         },
 
-        findItem() {
-            const possibleItems = Object.keys(this.data.items).filter(k => this.data.items[k].sell);
-            const foundItemKey = possibleItems[Math.floor(Math.random() * possibleItems.length)];
-            this.state.player.inventory.push(foundItemKey);
-            this.appendOutput(`你找到了一個 ${this.getFormattedItemName(foundItemKey)}！`, true);
+        findChest() {
+            const floor = this.state.player.currentFloor;
+            const rand = Math.random();
+            let chestType;
+
+            // Determine chest type based on floor
+            if (floor <= 2) { // Floors 1-2
+                chestType = rand < 0.8 ? 'wooden' : 'sturdy';
+            } else if (floor <= 4) { // Floors 3-4
+                if (rand < 0.4) chestType = 'wooden';
+                else if (rand < 0.9) chestType = 'sturdy';
+                else chestType = 'ornate';
+            } else if (floor <= 6) { // Floors 5-6
+                if (rand < 0.2) chestType = 'sturdy';
+                else if (rand < 0.8) chestType = 'ornate';
+                else chestType = 'legendary';
+            } else { // Floor 7+
+                chestType = rand < 0.1 ? 'ornate' : 'legendary';
+            }
+            
+            const chestDisplayNames = {
+                wooden: '木製寶箱',
+                sturdy: '堅固寶箱',
+                ornate: '華麗寶箱',
+                legendary: '傳說寶箱'
+            };
+            const chestName = chestDisplayNames[chestType];
+            const formattedChestName = this.getFormattedChestName(chestType, chestName);
+
+            this.appendOutput(`你發現了一個 ${formattedChestName}！`, true);
+            this.openChest(chestType);
+        },
+
+        openChest(chestType) {
+            const rand = Math.random();
+            let itemRarity;
+
+            // Determine item rarity based on chest type
+            switch (chestType) {
+                case 'wooden':
+                    itemRarity = rand < 0.85 ? 'common' : 'uncommon';
+                    break;
+                case 'sturdy':
+                    if (rand < 0.6) itemRarity = 'uncommon';
+                    else if (rand < 0.95) itemRarity = 'rare';
+                    else itemRarity = 'common';
+                    break;
+                case 'ornate':
+                    if (rand < 0.7) itemRarity = 'rare';
+                    else if (rand < 0.95) itemRarity = 'uncommon';
+                    else itemRarity = 'legendary';
+                    break;
+                case 'legendary':
+                    itemRarity = rand < 0.9 ? 'legendary' : 'rare';
+                    break;
+            }
+
+            const foundItemKey = this.getRandomItemByRarity(itemRarity);
+
+            if (foundItemKey) {
+                this.state.player.inventory.push(foundItemKey);
+                this.appendOutput(`你打開寶箱，獲得了 ${this.getFormattedItemName(foundItemKey)}！`, true);
+            } else {
+                this.appendOutput('寶箱是空的...真是太不幸了。');
+            }
+        },
+
+        getRandomItemByRarity(rarity) {
+            const rarityOrder = ['legendary', 'rare', 'uncommon', 'common'];
+            let searchIndex = rarityOrder.indexOf(rarity);
+            let itemsOfRarity = [];
+
+            while (searchIndex < rarityOrder.length && itemsOfRarity.length === 0) {
+                const currentRarity = rarityOrder[searchIndex];
+                itemsOfRarity = Object.keys(this.data.items).filter(key => {
+                    const item = this.data.items[key];
+                    return item.sell && (item.rarity || 'common') === currentRarity;
+                });
+                searchIndex++;
+            }
+
+            if (itemsOfRarity.length > 0) {
+                return itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
+            }
+            return null;
         },
 
         showCombatOptions() {
@@ -522,22 +602,45 @@
             const m = this.state.currentMonster;
             const formattedName = this.getFormattedMonsterName(m);
             this.appendOutput(`${formattedName} 被你擊敗了！`, true);
-            
-            const goldEarned = Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin;
-            this.state.player.gold += goldEarned;
-            this.appendOutput(`你獲得了 ${goldEarned} 金幣！`);
 
-            this.state.player.xp += m.xpReward;
-            this.appendOutput(`你獲得了 ${m.xpReward} 經驗值！`);
+            if (m.monsterType === 'boss') {
+                // --- Boss Defeated Logic ---
+                this.appendOutput('隨著一聲巨響，強大的氣息煙消雲散，地監恢復了平靜。', true);
+                
+                const goldEarned = (Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin) * 3; // 3x Gold
+                this.state.player.gold += goldEarned;
+                this.appendOutput(`你獲得了 <span class="text-yellow-400">${goldEarned}</span> 金幣！`, true);
+
+                const xpEarned = m.xpReward * 3; // 3x XP
+                this.state.player.xp += xpEarned;
+                this.appendOutput(`你獲得了 ${xpEarned} 經驗值！`);
+
+                // Guaranteed high-quality chest
+                const chestType = Math.random() < 0.7 ? 'ornate' : 'legendary';
+                const chestDisplayNames = { ornate: '華麗寶箱', legendary: '傳說寶箱' };
+                const chestName = chestDisplayNames[chestType];
+                const formattedChestName = this.getFormattedChestName(chestType, chestName);
+                this.appendOutput(`頭目掉落了一個${formattedChestName}！`, true);
+                this.openChest(chestType);
+
+            } else {
+                // --- Normal Monster Defeated Logic ---
+                const goldEarned = Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin;
+                this.state.player.gold += goldEarned;
+                this.appendOutput(`你獲得了 <span class="text-yellow-400">${goldEarned}</span> 金幣！`, true);
+
+                this.state.player.xp += m.xpReward;
+                this.appendOutput(`你獲得了 ${m.xpReward} 經驗值！`);
+
+                m.drops?.forEach(drop => {
+                    if (Math.random() < drop.chance) {
+                        this.state.player.inventory.push(drop.itemKey);
+                        this.appendOutput(`你獲得了 ${this.getFormattedItemName(drop.itemKey)}！`, true);
+                    }
+                });
+            }
+
             this.checkLevelUp();
-
-            m.drops?.forEach(drop => {
-                if (Math.random() < drop.chance) {
-                    this.state.player.inventory.push(drop.itemKey);
-                    this.appendOutput(`你獲得了 ${this.getFormattedItemName(drop.itemKey)}！`, true);
-                }
-            });
-
             this.state.currentMonster = null;
             this.setPhase('explore');
         },
@@ -545,16 +648,23 @@
         runAway() {
             const m = this.state.currentMonster;
             if (m && m.monsterType === 'boss') {
-                this.appendOutput('你無法從強大的頭目面前逃跑！');
-                const playerStats = this.calculatePlayerStats();
-                const monsterDamage = Math.max(1, m.attack - playerStats.defense);
-                this.state.player.hp -= monsterDamage;
-                this.appendOutput(`${this.getFormattedMonsterName(m)} 對你造成了 ${monsterDamage} 點傷害！`, true);
-                this.updateStatus();
-                if (this.state.player.hp <= 0) { this.gameOver('你的生命值歸零了。你倒在了地監深處...'); }
-                return;
+                if (Math.random() < 0.3) { // 30% chance to escape boss
+                    this.setOutput('你在強大的壓迫感中，驚險地逃跑了！');
+                    this.state.currentMonster = null;
+                    this.setPhase('explore');
+                } else {
+                    this.appendOutput('你嘗試從頭目面前逃跑，但失敗了！');
+                    const playerStats = this.calculatePlayerStats();
+                    const monsterDamage = Math.max(1, m.attack - playerStats.defense);
+                    this.state.player.hp -= monsterDamage;
+                    this.appendOutput(`${this.getFormattedMonsterName(m)} 對你造成了 ${monsterDamage} 點傷害！`, true);
+                    this.updateStatus();
+                    if (this.state.player.hp <= 0) { this.gameOver('你的生命值歸零了。你倒在了地監深處...'); }
+                }
+                return; // End the function here for boss encounters
             }
 
+            // This part is for non-boss monsters
             if (Math.random() < 0.5) {
                 this.setOutput('你成功逃跑了！');
                 this.state.currentMonster = null;
@@ -815,6 +925,16 @@
                 legendary: 'text-red-400'
             }[rarity];
             return `<span class="${colorClass}">${monster.name}</span>`;
+        },
+        getFormattedChestName(chestType, chestName) {
+            const rarityColorMap = {
+                wooden: 'text-gray-300',    // Common
+                sturdy: 'text-green-400',  // Uncommon
+                ornate: 'text-blue-400',    // Rare
+                legendary: 'text-red-400'   // Legendary
+            };
+            const colorClass = rarityColorMap[chestType] || 'text-gray-300';
+            return `<span class="${colorClass}">${chestName}</span>`;
         },
         getFormattedItemName(itemKey) {
             const itemData = this.data.items[itemKey];

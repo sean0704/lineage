@@ -482,9 +482,9 @@
                 const formattedName = this.getFormattedMonsterName(m);
                 let encounterMessage;
                 if (m.monsterType === 'boss') {
-                    encounterMessage = `<div class="boss-encounter">你遭遇到一股強大的壓迫感！<br>巨大的 ${formattedName} (Lv.${m.level}) 出現在你的面前！</div>`;
+                    encounterMessage = `<div class="boss-encounter">你遭遇到一股強大的壓迫感！<br> ${formattedName} (Lv.${m.level}) 出現在你的面前！</div>`;
                 } else {
-                    encounterMessage = `你遇到了一隻 ${formattedName} (Lv.${m.level}, 地下 ${this.state.player.currentFloor} 層)！`;
+                    encounterMessage = `你遇到了一隻 ${formattedName} (Lv.${m.level})！`;
                 }
                 this.setOutput(encounterMessage, true);
                 this.setPhase('combat');
@@ -505,17 +505,15 @@
 
             // Determine chest type based on floor
             if (floor <= 2) { // Floors 1-2
-                chestType = rand < 0.8 ? 'wooden' : 'sturdy';
+                chestType = rand < 0.8 ? 'wooden' : 'sturdy'; // 80% wooden, 20% sturdy
             } else if (floor <= 4) { // Floors 3-4
-                if (rand < 0.4) chestType = 'wooden';
-                else if (rand < 0.9) chestType = 'sturdy';
-                else chestType = 'ornate';
-            } else if (floor <= 6) { // Floors 5-6
-                if (rand < 0.2) chestType = 'sturdy';
-                else if (rand < 0.8) chestType = 'ornate';
-                else chestType = 'legendary';
-            } else { // Floor 7+
-                chestType = rand < 0.1 ? 'ornate' : 'legendary';
+                if (rand < 0.4) chestType = 'wooden'; // 40% wooden
+                else if (rand < 0.8) chestType = 'sturdy'; // 40% sturdy
+                else chestType = 'ornate'; // 20% ornate
+            } else { // Floors 5-7
+                if (rand < 0.4) chestType = 'sturdy'; // 40% sturdy
+                else if (rand < 0.8) chestType = 'ornate'; // 40% ornate
+                else chestType = 'legendary'; // 20% legendary
             }
             
             const chestDisplayNames = {
@@ -537,21 +535,21 @@
 
             // Determine item rarity based on chest type
             switch (chestType) {
-                case 'wooden':
-                    itemRarity = rand < 0.85 ? 'common' : 'uncommon';
+                case 'wooden': // 80% common, 20% uncommon
+                    itemRarity = rand < 0.8 ? 'common' : 'uncommon';
                     break;
-                case 'sturdy':
-                    if (rand < 0.6) itemRarity = 'uncommon';
-                    else if (rand < 0.95) itemRarity = 'rare';
-                    else itemRarity = 'common';
+                case 'sturdy': // 40% common, 40% rare, 20% uncommon
+                    if (rand < 0.4) itemRarity = 'common';
+                    else if (rand < 0.8) itemRarity = 'rare';
+                    else itemRarity = 'uncommon';
                     break;
-                case 'ornate':
-                    if (rand < 0.7) itemRarity = 'rare';
-                    else if (rand < 0.95) itemRarity = 'uncommon';
+                case 'ornate': // 40% rare, 40% uncommon, 20% legendary
+                    if (rand < 0.4) itemRarity = 'rare';
+                    else if (rand < 0.8) itemRarity = 'uncommon';
                     else itemRarity = 'legendary';
                     break;
-                case 'legendary':
-                    itemRarity = rand < 0.9 ? 'legendary' : 'rare';
+                case 'legendary': // 40% legendary, 60% rare
+                    itemRarity = rand < 0.4 ? 'legendary' : 'rare';
                     break;
             }
 
@@ -767,6 +765,39 @@
             localStorage.removeItem('lineageGameSave');
         },
 
+        sortItems(itemKeys) {
+            const SORT_ORDER = {
+                TYPE: { 'potion': 1, 'scroll': 1, 'weapon': 2, 'armor': 2 },
+                SLOT: { 'rightHand': 1, 'leftHand': 2, 'head': 3, 'body': 4, 'legs': 5 },
+                RARITY: { 'legendary': 4, 'rare': 3, 'uncommon': 2, 'common': 1 }
+            };
+
+            return itemKeys.sort((keyA, keyB) => {
+                const itemA = this.data.items[keyA];
+                const itemB = this.data.items[keyB];
+
+                // 1. Main Category: Consumables (1) > Equipment (2)
+                const typeA = SORT_ORDER.TYPE[itemA.type] || 99;
+                const typeB = SORT_ORDER.TYPE[itemB.type] || 99;
+                if (typeA !== typeB) return typeA - typeB;
+
+                // 2. Equipment Slot (if applicable)
+                if (itemA.type === 'weapon' || itemA.type === 'armor') {
+                    const slotA = SORT_ORDER.SLOT[itemA.slot] || 99;
+                    const slotB = SORT_ORDER.SLOT[itemB.slot] || 99;
+                    if (slotA !== slotB) return slotA - slotB;
+                }
+
+                // 3. Rarity (Descending)
+                const rarityA = SORT_ORDER.RARITY[itemA.rarity || 'common'] || 0;
+                const rarityB = SORT_ORDER.RARITY[itemB.rarity || 'common'] || 0;
+                if (rarityA !== rarityB) return rarityB - rarityA;
+
+                // 4. Name (Alphabetical)
+                return (itemA.name || '').localeCompare(itemB.name || '');
+            });
+        },
+
         showInventory() {
             this.state.lastMajorPhase = this.state.gamePhase;
             this.state.gamePhase = 'inventory';
@@ -787,7 +818,10 @@
                 acc[key] = (acc[key] || 0) + 1;
                 return acc;
             }, {});
-            for (const itemKey in itemCounts) {
+
+            const sortedItemKeys = this.sortItems(Object.keys(itemCounts));
+
+            for (const itemKey of sortedItemKeys) {
                 const itemData = this.data.items[itemKey];
                 const li = document.createElement('li');
                 let text = `${this.getFormattedItemName(itemKey)} x${itemCounts[itemKey]}`;
@@ -927,11 +961,16 @@
                 acc[key] = (acc[key] || 0) + 1;
                 return acc;
             }, {});
+            
             if (Object.keys(itemCounts).length === 0) {
                 listEl.innerHTML = '<div class="text-center text-gray-400 p-4">你的背包是空的。</div>';
                 return;
             }
-            for (const itemKey in itemCounts) {
+
+            const sellableItems = Object.keys(itemCounts).filter(key => this.data.items[key] && this.data.items[key].sell);
+            const sortedItemKeys = this.sortItems(sellableItems);
+
+            for (const itemKey of sortedItemKeys) {
                 const itemData = this.data.items[itemKey];
                 if (!itemData || !itemData.sell) continue;
                 const itemDiv = document.createElement('div');

@@ -260,9 +260,9 @@
         async init() {
             try {
                 this.cacheDOMElements();
-                await this.loadData(); // 等待資料載入完成
+                await this.loadData();
                 this.bindEvents();
-                this.resetGame();
+                this.checkForSave();
             } catch (error) {
                 console.error("遊戲初始化失敗:", error);
                 document.body.innerHTML = `<div style="color: red; text-align: center; margin-top: 50px; font-size: 1.5rem;">遊戲資料載入失敗: ${error.message}</div>`;
@@ -285,10 +285,8 @@
             });
         },
         
-        // **修改**：使用 fetch 並行載入所有外部 JSON
         async loadData() {
             try {
-                // 並行發出所有資料請求
                 const [monsterResponse, itemResponse, floorResponse, shopResponse] = await Promise.all([
                     fetch('monsters.json'),
                     fetch('items.json'),
@@ -296,13 +294,11 @@
                     fetch('shop.json')
                 ]);
 
-                // 檢查所有回應是否成功
                 if (!monsterResponse.ok) throw new Error('無法載入 monsters.json');
                 if (!itemResponse.ok) throw new Error('無法載入 items.json');
                 if (!floorResponse.ok) throw new Error('無法載入 dungeon_floors.json');
                 if (!shopResponse.ok) throw new Error('無法載入 shop.json');
 
-                // 並行解析 JSON 資料
                 const [monsterData, itemData, floorData, shopData] = await Promise.all([
                     monsterResponse.json(),
                     itemResponse.json(),
@@ -310,27 +306,37 @@
                     shopResponse.json()
                 ]);
 
-                // 將資料存入 Game 物件
                 this.data.monsters = monsterData;
                 this.data.items = itemData;
                 this.data.floorMonsterPools = floorData;
                 this.data.shopInventory = shopData;
 
             } catch (error) {
-                // 統一處理任何載入或解析錯誤
                 console.error("載入遊戲資料時發生錯誤:", error);
-                throw error; // 將錯誤向上拋出，讓 init 函式捕捉
+                throw error;
             }
         },
 
         bindEvents() {
-            this.DOM.restartButton.addEventListener('click', () => this.resetGame());
+            this.DOM.restartButton.addEventListener('click', () => this.resetGame(true)); // Pass true to indicate a manual restart
             this.DOM.toggleEquippedButton.addEventListener('click', () => this.toggleEquippedDisplay());
             this.DOM.cancelEquipButton.addEventListener('click', () => this.DOM.equipConfirmModal.classList.add('hidden'));
             this.DOM.closeShopButton.addEventListener('click', () => this.closeShop());
         },
 
-        resetGame() {
+        checkForSave() {
+            if (localStorage.getItem('lineageGameSave')) {
+                this.setOutput('發現之前的遊戲存檔。');
+                this.showStartOptions(true);
+            } else {
+                this.resetGame();
+            }
+        },
+
+        resetGame(isManualRestart = false) {
+            if (isManualRestart) {
+                this.deleteSave();
+            }
             this.state.player = this.getInitialPlayerState();
             this.state.currentMonster = null;
             this.DOM.gameOverModal.classList.add('hidden');
@@ -422,7 +428,17 @@
             this.updateUI();
         },
         
-        showStartOptions() { this.renderButtons([{ text: '進入地監', action: () => this.enterDungeon() }]); },
+        showStartOptions(hasSave = false) {
+            let buttons = [];
+            if (hasSave) {
+                buttons.push({ text: '繼續遊戲', action: () => this.loadGame(), className: 'game-button green-button' });
+                buttons.push({ text: '新遊戲', action: () => this.resetGame(true), className: 'game-button gray-button' });
+            } else {
+                buttons.push({ text: '進入地監', action: () => this.enterDungeon() });
+            }
+            this.renderButtons(buttons);
+        },
+
         enterDungeon() {
             this.setOutput(`你踏入了地監地下 ${this.state.player.currentFloor} 層... 周圍一片漆黑，你感覺到危險潛伏著。`);
             this.setPhase('explore');
@@ -697,8 +713,10 @@
         returnToVillage() {
             this.state.player.currentFloor = 1;
             this.state.player.explorationsOnFloor = 0;
+            this.saveGame();
             this.setPhase('village');
         },
+
         restInVillage() {
             if (this.state.player.hp < this.state.player.maxHp) {
                 this.state.player.hp = this.state.player.maxHp;
@@ -706,12 +724,47 @@
                 this.updateStatus();
             } else { this.appendOutput('你的生命值已經是滿的了。'); }
         },
+
         gameOver(message) {
+            this.deleteSave();
             this.state.gamePhase = 'game_over';
             this.DOM.gameOverMessage.textContent = message;
             this.DOM.gameOverModal.classList.remove('hidden');
             this.renderButtons([]);
             this.updateUI();
+        },
+
+        saveGame() {
+            try {
+                localStorage.setItem('lineageGameSave', JSON.stringify(this.state.player));
+                this.appendOutput('<span class="text-green-400">遊戲進度已儲存。</span>', true);
+            } catch (e) {
+                console.error("存檔失敗:", e);
+                this.appendOutput('<span class="text-red-400">存檔失敗，瀏覽器可能已滿或處於隱私模式。</span>', true);
+            }
+        },
+
+        loadGame() {
+            try {
+                const savedState = localStorage.getItem('lineageGameSave');
+                if (savedState) {
+                    this.state.player = JSON.parse(savedState);
+                    this.state.currentMonster = null;
+                    this.DOM.gameOverModal.classList.add('hidden');
+                    this.setOutput('成功載入遊戲進度！你目前在村莊。');
+                    this.setPhase('village');
+                    return true;
+                }
+            } catch (e) {
+                console.error("讀檔失敗:", e);
+                this.appendOutput('<span class="text-red-400">讀取存檔失敗，檔案可能已損毀。</span>', true);
+                this.deleteSave();
+            }
+            return false;
+        },
+
+        deleteSave() {
+            localStorage.removeItem('lineageGameSave');
         },
 
         showInventory() {

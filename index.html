@@ -903,7 +903,7 @@
             if (itemData.effect.type === 'heal') {
                 if (this.state.player.hp < this.state.player.maxHp) {
                     this.state.player.hp = Math.min(this.state.player.maxHp, this.state.player.hp + itemData.effect.amount);
-                    this.appendOutput(`你使用了 ${itemData.name}，恢復了 ${itemData.effect.amount} 點生命值！`);
+                    this.appendOutput(`你使用了 ${itemData.name}，你覺得舒服多了。 (恢復了 ${itemData.effect.amount} 點生命值)`);
                     used = true;
                 } else { this.appendOutput('你的生命值已滿。'); }
             } else if (itemData.effect.type === 'teleportHome') {

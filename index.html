@@ -620,14 +620,14 @@
             if (m.monsterType === 'boss') {
                 // --- Boss Defeated Logic ---
                 this.appendOutput('隨著一聲巨響，強大的氣息煙消雲散，地監恢復了平靜。', true);
-                
-                const goldEarned = (Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin) * 3; // 3x Gold
-                this.state.player.gold += goldEarned;
-                this.appendOutput(`你獲得了 <span class="text-yellow-400">${goldEarned}</span> 金幣！`, true);
 
                 const xpEarned = m.xpReward * 3; // 3x XP
                 this.state.player.xp += xpEarned;
                 this.appendOutput(`你獲得了 ${xpEarned} 經驗值！`);
+                
+                const goldEarned = (Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin) * 3; // 3x Gold
+                this.state.player.gold += goldEarned;
+                this.appendOutput(`${formattedName} 給你 <span class="text-yellow-400">金幣 (${goldEarned})</span> 。`, true);
 
                 // Guaranteed high-quality chest
                 const chestType = Math.random() < 0.7 ? 'ornate' : 'legendary';
@@ -639,17 +639,17 @@
 
             } else {
                 // --- Normal Monster Defeated Logic ---
-                const goldEarned = Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin;
-                this.state.player.gold += goldEarned;
-                this.appendOutput(`你獲得了 <span class="text-yellow-400">${goldEarned}</span> 金幣！`, true);
-
                 this.state.player.xp += m.xpReward;
                 this.appendOutput(`你獲得了 ${m.xpReward} 經驗值！`);
+
+                const goldEarned = Math.floor(Math.random() * (m.goldMax - m.goldMin + 1)) + m.goldMin;
+                this.state.player.gold += goldEarned;
+                this.appendOutput(`${formattedName} 給你 <span class="text-yellow-400">金幣 (${goldEarned})</span> 。`, true);
 
                 m.drops?.forEach(drop => {
                     if (Math.random() < drop.chance) {
                         this.state.player.inventory.push(drop.itemKey);
-                        this.appendOutput(`你獲得了 ${this.getFormattedItemName(drop.itemKey)}！`, true);
+                        this.appendOutput(`${formattedName} 給你 ${this.getFormattedItemName(drop.itemKey)} 。`, true);
                     }
                 });
             }

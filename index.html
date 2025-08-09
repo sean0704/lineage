@@ -1054,7 +1054,26 @@
             }
             return { attack: totalAttack, defense: totalDefense };
         },
-        getXpRequiredForLevel(level) { return Math.floor(100 + (level - 1) * 50); },
+        getXpRequiredForLevel(level) {
+            let requiredXp;
+
+            if (level < 45) {
+                // --- 45級前 ---
+                // 此公式的曲線與《天堂》1-44級的數據非常吻合
+                requiredXp = 5.5 * Math.pow(level, 2.9);
+            } else {
+                // --- 45級及之後 ---
+                // 基礎值同樣按level^2.9計算，但乘上一個爆炸性增長的倍率
+                const baseFormulaXp = 5.5 * Math.pow(level, 2.9);
+                
+                // 這個倍率從45級開始生效，並且自身呈指數增長
+                const multiplier = 1.9 * Math.pow(2, level - 45);
+                
+                requiredXp = baseFormulaXp * multiplier;
+            }
+
+            return Math.floor(requiredXp);
+        },
         
         appendOutput(message, isHTML = false) {
             const output = this.DOM.gameOutput;

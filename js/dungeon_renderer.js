@@ -14,7 +14,7 @@ class DungeonRenderer {
         this.currentEnv = 'village';
         this.currentFloor = 1;
         this.clock = new THREE.Clock();
-        this.cameraShake = { intensity: 0, decay: 5, trauma: 0 };
+        this._shakeRaf = null;
         this.dungeonGroup = new THREE.Group();
         this.villageGroup = new THREE.Group();
         this.stageGroup = new THREE.Group(); // Holds characters & chests
@@ -287,24 +287,48 @@ class DungeonRenderer {
             this.scene.fog.density = fogDensity;
             this.camera.position.set(0, 2.2, 5.2);
         }
+
+        if (this._shakeRaf) {
+            cancelAnimationFrame(this._shakeRaf);
+            this._shakeRaf = null;
+        }
     }
 
-    shakeCamera(intensity = 0.4, trauma = 1.0) {
-        this.cameraShake.intensity = intensity;
-        this.cameraShake.trauma = trauma;
+    shakeCamera(intensity = 0.25, duration = 220) {
+        if (this._shakeRaf) {
+            cancelAnimationFrame(this._shakeRaf);
+            this._shakeRaf = null;
+        }
+        const startTime = performance.now();
+        const baseY = this.currentEnv === 'village' ? 2.0 : 2.2;
+        const step = (now) => {
+            const elapsed = now - startTime;
+            if (elapsed < duration) {
+                const factor = (1 - elapsed / duration) * intensity;
+                this.camera.position.x = (Math.random() - 0.5) * factor;
+                this.camera.position.y = baseY + (Math.random() - 0.5) * factor;
+                this.camera.lookAt(0, 1.1, 0);
+                this._shakeRaf = requestAnimationFrame(step);
+            } else {
+                this.camera.position.x = 0;
+                this.camera.position.y = baseY;
+                this.camera.lookAt(0, 1.1, 0);
+                this._shakeRaf = null;
+            }
+        };
+        this._shakeRaf = requestAnimationFrame(step);
     }
 
     animate() {
         requestAnimationFrame(() => this.animate());
         const time = this.clock.getElapsedTime();
-        const delta = this.clock.getDelta();
 
-        // Animate Torches
+        // Animate Torches (gentle smooth glow, no high-frequency jitter)
         this.torches.forEach(t => {
-            const flicker = Math.sin(time * 6 + t.seed) * 0.15 + (Math.random() - 0.5) * 0.1;
+            const flicker = Math.sin(time * 2.5 + t.seed) * 0.08;
             t.light.intensity = t.baseIntensity + flicker;
             if (t.flameMesh) {
-                t.flameMesh.scale.setScalar(0.9 + flicker * 0.3);
+                t.flameMesh.scale.setScalar(0.95 + flicker * 0.15);
             }
         });
 
@@ -323,21 +347,12 @@ class DungeonRenderer {
             this.entityManager.update(time);
         }
 
-        // Camera Shake & Subtle Sway
-        let shakeOffsetX = 0;
-        let shakeOffsetY = 0;
-        if (this.cameraShake.trauma > 0) {
-            this.cameraShake.trauma = Math.max(0, this.cameraShake.trauma - delta * this.cameraShake.decay);
-            const shake = this.cameraShake.trauma * this.cameraShake.intensity;
-            shakeOffsetX = (Math.random() - 0.5) * shake;
-            shakeOffsetY = (Math.random() - 0.5) * shake;
+        // Ensure completely stable camera when not actively shaking
+        if (!this._shakeRaf) {
+            this.camera.position.x = 0;
+            this.camera.position.y = this.currentEnv === 'village' ? 2.0 : 2.2;
+            this.camera.lookAt(0, 1.1, 0);
         }
-
-        const swayX = Math.sin(time * 0.5) * 0.04;
-        const swayY = Math.cos(time * 0.8) * 0.03;
-        this.camera.position.x = swayX + shakeOffsetX;
-        this.camera.position.y = (this.currentEnv === 'village' ? 2.0 : 2.2) + swayY + shakeOffsetY;
-        this.camera.lookAt(0, 1.1, 0);
 
         this.renderer.render(this.scene, this.camera);
     }

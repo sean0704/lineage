@@ -20,7 +20,7 @@ export function buildChest(tier: ChestTier): ChestModel {
   const kit = new Kit();
   const p = PALETTE[tier];
   const wood = kit.mat(p.wood, { rough: 0.85 });
-  const band = kit.mat(p.band, { metal: 0.5, rough: 0.4 });
+  const band = kit.mat(p.band, { metal: 0.85, rough: 0.35 });
   const root = new THREE.Group();
   const w = 0.8;
   const d = 0.52;

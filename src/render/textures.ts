@@ -9,6 +9,8 @@ import { createRng, type Rng } from '../core/rng';
 export interface SurfaceTextures {
   map: THREE.CanvasTexture;
   bump: THREE.CanvasTexture;
+  /** 粗糙度（白＝粗糙、黑＝光滑潮濕） */
+  rough?: THREE.CanvasTexture;
 }
 
 const cache = new Map<string, unknown>();
@@ -121,44 +123,93 @@ export function stoneWall(): SurfaceTextures {
   });
 }
 
-/** 不規則石板地 */
+/** 不規則石板地，帶潮濕水窪（粗糙度貼圖） */
 export function flagstone(): SurfaceTextures {
   return memo('flagstone', () => {
     const size = 512;
     const rng = createRng(23);
     const [cc, c] = canvas(size);
     const [bc, b] = canvas(size);
-    c.fillStyle = '#1e1c1a';
+    const [rc, r] = canvas(size);
+    c.fillStyle = '#16140f';
     c.fillRect(0, 0, size, size);
-    b.fillStyle = '#1a1a1a';
+    b.fillStyle = '#141414';
     b.fillRect(0, 0, size, size);
-    const grid = 4;
-    const cell = size / grid;
-    for (let gy = 0; gy < grid; gy++) {
-      for (let gx = 0; gx < grid; gx++) {
-        if ((gx + gy) % 3 === 2 && gx < grid - 1 && rng.chance(0.5)) continue;
-        const x = gx * cell + rng.range(2, 6);
-        const y = gy * cell + rng.range(2, 6);
-        const w = cell - rng.range(6, 12);
-        const h = cell - rng.range(6, 12);
-        const tone = rng.range(80, 120);
-        c.fillStyle = shade(tone, 0);
-        roundRect(c, x, y, w, h, 10);
-        c.fill();
-        const g = c.createRadialGradient(x + w / 2, y + h / 2, 5, x + w / 2, y + h / 2, w * 0.7);
-        g.addColorStop(0, 'rgba(255,255,255,0.06)');
-        g.addColorStop(1, 'rgba(0,0,0,0.25)');
+    r.fillStyle = '#f2f2f2';
+    r.fillRect(0, 0, size, size);
+
+    // 以不規則網格切出石板
+    const cols = 4;
+    const rows = 4;
+    const cw = size / cols;
+    const ch = size / rows;
+    for (let gy = 0; gy < rows; gy++) {
+      const shift = (gy % 2) * cw * 0.5;
+      for (let gx = -1; gx < cols; gx++) {
+        const x = gx * cw + shift + rng.range(-6, 6);
+        const y = gy * ch + rng.range(-4, 4);
+        const w = cw - rng.range(7, 13);
+        const h = ch - rng.range(7, 13);
+        const tone = rng.range(78, 124);
+        const pts: [number, number][] = [
+          [x + rng.range(2, 10), y + rng.range(2, 8)],
+          [x + w - rng.range(2, 10), y + rng.range(2, 8)],
+          [x + w - rng.range(0, 6), y + h * rng.range(0.4, 0.6)],
+          [x + w - rng.range(2, 10), y + h - rng.range(2, 8)],
+          [x + rng.range(2, 10), y + h - rng.range(2, 8)],
+          [x + rng.range(0, 6), y + h * rng.range(0.4, 0.6)],
+        ];
+        const path = () => {
+          const p = new Path2D();
+          p.moveTo(pts[0][0], pts[0][1]);
+          for (const [px, py] of pts.slice(1)) p.lineTo(px, py);
+          p.closePath();
+          return p;
+        };
+        const g = c.createLinearGradient(x, y, x + w, y + h);
+        g.addColorStop(0, shade(tone, 14));
+        g.addColorStop(1, shade(tone, -16));
         c.fillStyle = g;
-        roundRect(c, x, y, w, h, 10);
-        c.fill();
-        b.fillStyle = shade(190, rng.range(-25, 15));
-        roundRect(b, x + 2, y + 2, w - 4, h - 4, 12);
-        b.fill();
+        c.fill(path());
+        b.fillStyle = shade(196, rng.range(-26, 12));
+        b.fill(path());
+        // 石面磨損的亮紋
+        c.save();
+        c.clip(path());
+        for (let i = 0; i < 6; i++) {
+          c.strokeStyle = `rgba(255,255,255,${rng.range(0.02, 0.06)})`;
+          c.lineWidth = rng.range(4, 14);
+          c.beginPath();
+          c.moveTo(x + rng.range(0, w), y + rng.range(0, h));
+          c.lineTo(x + rng.range(0, w), y + rng.range(0, h));
+          c.stroke();
+        }
+        c.restore();
       }
     }
-    speckle(c, size, rng, 12000, 0.14);
-    speckle(b, size, rng, 8000, 0.25);
-    return { map: toTexture(cc, true), bump: toTexture(bc, false) };
+    // 水窪：顏色更深、表面光滑
+    for (let i = 0; i < 7; i++) {
+      const px = rng.range(0, size);
+      const py = rng.range(0, size);
+      const rad = rng.range(24, 70);
+      for (const [ox, oy] of [[0, 0], [size, 0], [-size, 0], [0, size], [0, -size]]) {
+        const rg = r.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, rad);
+        rg.addColorStop(0, 'rgba(95,95,95,0.85)');
+        rg.addColorStop(0.55, 'rgba(150,150,150,0.5)');
+        rg.addColorStop(1, 'rgba(242,242,242,0)');
+        r.fillStyle = rg;
+        r.fillRect(px + ox - rad, py + oy - rad, rad * 2, rad * 2);
+        const cg = c.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, rad);
+        cg.addColorStop(0, 'rgba(0,0,0,0.35)');
+        cg.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = cg;
+        c.fillRect(px + ox - rad, py + oy - rad, rad * 2, rad * 2);
+      }
+    }
+    speckle(c, size, rng, 14000, 0.16);
+    speckle(b, size, rng, 9000, 0.25);
+    speckle(r, size, rng, 4000, 0.2);
+    return { map: toTexture(cc, true), bump: toTexture(bc, false), rough: toTexture(rc, false) };
   });
 }
 
@@ -288,4 +339,190 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+export type DecalKind = 'grime' | 'moss' | 'lava' | 'rune';
+
+/** 地面貼花：髒污、苔蘚、熔岩裂縫、魔法符文（透明背景） */
+export function decalTexture(kind: DecalKind): THREE.CanvasTexture {
+  return memo(`decal:${kind}`, () => {
+    const size = 256;
+    const rng = createRng(kind.length * 97 + 5);
+    const [cc, c] = canvas(size);
+    const mid = size / 2;
+    if (kind === 'grime' || kind === 'moss') {
+      const base = kind === 'grime' ? [12, 10, 8] : [40, 70, 30];
+      for (let i = 0; i < 26; i++) {
+        const x = mid + rng.range(-70, 70);
+        const y = mid + rng.range(-70, 70);
+        const r = rng.range(14, 56);
+        const g = c.createRadialGradient(x, y, 0, x, y, r);
+        const a = kind === 'grime' ? rng.range(0.12, 0.3) : rng.range(0.25, 0.5);
+        g.addColorStop(0, `rgba(${base[0]},${base[1]},${base[2]},${a})`);
+        g.addColorStop(1, `rgba(${base[0]},${base[1]},${base[2]},0)`);
+        c.fillStyle = g;
+        c.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      if (kind === 'moss') {
+        for (let i = 0; i < 900; i++) {
+          const a = rng.range(0, Math.PI * 2);
+          const r = Math.pow(rng.next(), 0.7) * 95;
+          c.fillStyle = `rgba(${rng.int(50, 90)},${rng.int(100, 150)},${rng.int(40, 70)},${rng.range(0.3, 0.8)})`;
+          c.fillRect(mid + Math.cos(a) * r, mid + Math.sin(a) * r, rng.range(1, 3), rng.range(1, 3));
+        }
+      }
+    } else if (kind === 'lava') {
+      c.lineCap = 'round';
+      c.shadowColor = 'rgba(255,120,30,1)';
+      c.shadowBlur = 10;
+      const crack = (x: number, y: number, a: number, len: number, w: number, depth: number) => {
+        c.strokeStyle = `rgba(255,${rng.int(110, 190)},40,0.95)`;
+        c.lineWidth = w;
+        c.beginPath();
+        c.moveTo(x, y);
+        for (let i = 0; i < len; i++) {
+          a += rng.range(-0.6, 0.6);
+          x += Math.cos(a) * 9;
+          y += Math.sin(a) * 9;
+          c.lineTo(x, y);
+          if (depth < 2 && rng.chance(0.12)) crack(x, y, a + rng.range(-1.2, 1.2), Math.floor(len / 2), w * 0.6, depth + 1);
+        }
+        c.stroke();
+      };
+      for (let i = 0; i < 3; i++) crack(mid, mid, rng.range(0, Math.PI * 2), 10, 3.5, 0);
+    } else {
+      c.strokeStyle = 'rgba(255,255,255,0.9)';
+      c.shadowColor = 'rgba(255,255,255,1)';
+      c.shadowBlur = 6;
+      c.lineWidth = 3;
+      for (const r of [110, 92]) {
+        c.beginPath();
+        c.arc(mid, mid, r, 0, Math.PI * 2);
+        c.stroke();
+      }
+      c.lineWidth = 2;
+      c.beginPath();
+      for (let i = 0; i <= 6; i++) {
+        const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+        const b = ((i + 2) / 6) * Math.PI * 2 - Math.PI / 2;
+        c.moveTo(mid + Math.cos(a) * 92, mid + Math.sin(a) * 92);
+        c.lineTo(mid + Math.cos(b) * 92, mid + Math.sin(b) * 92);
+      }
+      c.stroke();
+      c.font = 'bold 18px serif';
+      c.fillStyle = 'rgba(255,255,255,0.9)';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      const glyphs = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃ';
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        c.fillText(glyphs[i], mid + Math.cos(a) * 101, mid + Math.sin(a) * 101);
+      }
+    }
+    const t = new THREE.CanvasTexture(cc);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+/** 角落蜘蛛網 */
+export function webTexture(): THREE.CanvasTexture {
+  return memo('web', () => {
+    const size = 256;
+    const rng = createRng(77);
+    const [cc, c] = canvas(size);
+    c.strokeStyle = 'rgba(255,255,255,0.75)';
+    c.lineWidth = 1.2;
+    const spokes = 9;
+    const angles = Array.from({ length: spokes }, (_, i) => (i / (spokes - 1)) * (Math.PI / 2) + rng.range(-0.04, 0.04));
+    for (const a of angles) {
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(Math.cos(a) * size * 1.1, Math.sin(a) * size * 1.1);
+      c.stroke();
+    }
+    for (let r = 18; r < size; r += rng.range(14, 24)) {
+      c.beginPath();
+      angles.forEach((a, i) => {
+        const rr = r + rng.range(-3, 3);
+        const x = Math.cos(a) * rr;
+        const y = Math.sin(a) * rr;
+        if (i === 0) c.moveTo(x, y);
+        else c.quadraticCurveTo(Math.cos(a - 0.1) * rr * 0.93, Math.sin(a - 0.1) * rr * 0.93, x, y);
+      });
+      c.stroke();
+    }
+    const t = new THREE.CanvasTexture(cc);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+const BANNER_COLORS: Record<string, [string, string]> = {
+  stone: ['#6a1818', '#d4a83a'],
+  moss: ['#1e3a24', '#c8b070'],
+  arcane: ['#2a1848', '#b8a0ff'],
+  inferno: ['#2a0c08', '#ff8a3a'],
+};
+
+/** 破舊的紋章旗幟（燕尾下擺、透明破洞） */
+export function bannerTexture(themeKey: string): THREE.CanvasTexture {
+  return memo(`banner:${themeKey}`, () => {
+    const w = 128;
+    const h = 256;
+    const rng = createRng(themeKey.length * 31);
+    const cc = document.createElement('canvas');
+    cc.width = w;
+    cc.height = h;
+    const c = cc.getContext('2d')!;
+    const [cloth, trim] = BANNER_COLORS[themeKey] ?? BANNER_COLORS.stone;
+    c.fillStyle = cloth;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(w, 0);
+    c.lineTo(w, h * 0.86);
+    c.lineTo(w / 2, h * 0.72);
+    c.lineTo(0, h * 0.86);
+    c.closePath();
+    c.fill();
+    // 布料直紋陰影
+    for (let x = 0; x < w; x += 6) {
+      c.fillStyle = `rgba(0,0,0,${0.06 + 0.06 * Math.sin(x * 0.3)})`;
+      c.fillRect(x, 0, 3, h);
+    }
+    c.strokeStyle = trim;
+    c.lineWidth = 5;
+    c.strokeRect(10, 8, w - 20, h * 0.62);
+    // 紋章：盾與交叉的劍
+    c.fillStyle = trim;
+    c.beginPath();
+    c.moveTo(w / 2, 50);
+    c.lineTo(w / 2 + 30, 62);
+    c.lineTo(w / 2 + 26, 110);
+    c.quadraticCurveTo(w / 2, 140, w / 2, 140);
+    c.quadraticCurveTo(w / 2, 140, w / 2 - 26, 110);
+    c.lineTo(w / 2 - 30, 62);
+    c.closePath();
+    c.fill();
+    c.fillStyle = cloth;
+    c.beginPath();
+    c.moveTo(w / 2, 62);
+    c.lineTo(w / 2 + 6, 120);
+    c.lineTo(w / 2 - 6, 120);
+    c.closePath();
+    c.fill();
+    c.fillRect(w / 2 - 16, 78, 32, 5);
+    // 破洞與髒污
+    c.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 5; i++) {
+      c.beginPath();
+      c.arc(rng.range(10, w - 10), rng.range(120, h * 0.8), rng.range(3, 9), 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalCompositeOperation = 'source-over';
+    speckle(c, w, rng, 1500, 0.15);
+    const t = new THREE.CanvasTexture(cc);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
 }

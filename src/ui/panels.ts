@@ -5,6 +5,7 @@ import { getFloor } from '../data/floors';
 import { canEnchant, countOf, enchantSuccessChance } from '../systems/inventory';
 import { SKILLS } from '../data/skills';
 import { btn, h } from './dom';
+import { itemIcon, slotIcon } from './icons';
 import type { Modal } from './Modal';
 
 export interface PanelHost {
@@ -21,7 +22,6 @@ export interface PanelHost {
   sellGear(uid: string): void;
 }
 
-const SLOT_ICONS: Record<Slot, string> = { weapon: '⚔️', shield: '🛡️', helm: '⛑️', armor: '🥋', legs: '👖' };
 
 export function gearStatText(def: EquipDef, enchant = 0): string {
   const parts: string[] = [];
@@ -92,7 +92,7 @@ function itemsTab(host: PanelHost, rerender: () => void): HTMLElement {
     }, { variant: 'success', disabled: blocked, title: blocked ? '戰鬥中無法使用' : undefined });
     action.classList.add('btn--sm');
     list.append(h('li', { class: 'row' },
-      h('span', { class: 'row__icon', text: def.icon }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(key)),
       h('div', { class: 'row__main' }, itemName(key), h('span', { class: 'c-dim', text: ` ×${countOf(p, key)}` }), h('div', { class: 'row__meta', text: def.desc })),
       h('div', { class: 'row__actions' }, action),
     ));
@@ -112,7 +112,7 @@ function gearTab(host: PanelHost, rerender: () => void): HTMLElement {
     const off = btn('卸下', () => { host.unequip(slot); rerender(); }, { variant: 'neutral', disabled: !g || host.inCombat });
     off.classList.add('btn--sm');
     doll.append(h('div', { class: 'row' },
-      h('span', { class: 'row__icon', text: SLOT_ICONS[slot] }),
+      h('span', { class: `row__icon${def ? ` r-border-${def.rarity}` : ''}` }, g ? itemIcon(g.key) : slotIcon(slot)),
       h('div', { class: 'row__main' },
         g ? itemName(g.key, g.enchant) : h('span', { class: 'row__name c-dim', text: '（未裝備）' }),
         h('div', { class: 'row__meta', text: `${SLOT_NAMES[slot]}${def ? `　${gearStatText(def, g!.enchant)}` : ''}` })),
@@ -137,7 +137,7 @@ function gearTab(host: PanelHost, rerender: () => void): HTMLElement {
     const on = btn('裝備', () => { host.equip(g.uid); rerender(); }, { variant: 'primary', disabled: host.inCombat });
     on.classList.add('btn--sm');
     list.append(h('li', { class: 'row' },
-      h('span', { class: 'row__icon', text: SLOT_ICONS[def.slot] }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(g.key)),
       h('div', { class: 'row__main' }, itemName(g.key, g.enchant),
         h('div', { class: 'row__meta', text: `${SLOT_NAMES[def.slot]}・${RARITY_NAMES[def.rarity]}　${gearStatText(def, g.enchant)}` }),
         h('div', { class: 'row__meta' }, diffNode(g, p.equipped[def.slot]))),
@@ -169,7 +169,7 @@ export function openEnchantPicker(host: PanelHost, scrollKey: string, back?: () 
     }, { variant: risky ? 'danger' : 'gold', disabled: host.inCombat });
     b.classList.add('btn--sm');
     list.append(h('li', { class: 'row' },
-      h('span', { class: 'row__icon', text: SLOT_ICONS[def.slot] }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(g.key)),
       h('div', { class: 'row__main' }, itemName(g.key, g.enchant), equipped ? h('span', { class: 'c-dim', text: '（裝備中）' }) : null,
         h('div', { class: `row__meta${risky ? ' c-bad' : ''}`, text: risky ? `已超過安定值！失敗時裝備會蒸發消失。成功率 ${Math.round(chance * 100)}%` : '安定值內，必定成功。' })),
       h('div', { class: 'row__actions' }, b),
@@ -204,7 +204,6 @@ function shopBuy(host: PanelHost, rerender: () => void): HTMLElement {
   for (const { item, minFloor } of SHOP_STOCK) {
     const def = getItem(item);
     const locked = minFloor > p.deepestFloor;
-    const icon = isEquip(def) ? SLOT_ICONS[def.slot] : (def as ConsumableDef).icon;
     const meta = isEquip(def) ? `${SLOT_NAMES[def.slot]}　${gearStatText(def)}` : def.desc;
     const actions = h('div', { class: 'row__actions' });
     if (locked) {
@@ -219,7 +218,7 @@ function shopBuy(host: PanelHost, rerender: () => void): HTMLElement {
     }
     const owned = isEquip(def) ? p.bag.filter((g) => g.key === item).length + SLOTS.filter((s) => p.equipped[s]?.key === item).length : countOf(p, item);
     list.append(h('li', { class: 'row', style: locked ? { opacity: '0.5' } : undefined },
-      h('span', { class: 'row__icon', text: icon }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(item)),
       h('div', { class: 'row__main' }, itemName(item), h('span', { class: 'c-gold', text: `　${def.price.toLocaleString()} 金幣` }),
         owned ? h('span', { class: 'c-dim', text: `（持有 ${owned}）` }) : null,
         h('div', { class: 'row__meta', text: meta })),
@@ -242,7 +241,7 @@ function shopSell(host: PanelHost, rerender: () => void): HTMLElement {
     one.classList.add('btn--sm');
     all.classList.add('btn--sm');
     list.append(h('li', { class: 'row' },
-      h('span', { class: 'row__icon', text: def.icon }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(key)),
       h('div', { class: 'row__main' }, itemName(key), h('span', { class: 'c-dim', text: ` ×${n}` }), h('div', { class: 'row__meta c-gold', text: `售價 ${price} 金幣` })),
       h('div', { class: 'row__actions' }, one, n > 1 ? all : null),
     ));
@@ -252,7 +251,7 @@ function shopSell(host: PanelHost, rerender: () => void): HTMLElement {
     const b = btn('賣出', () => { host.sellGear(g.uid); rerender(); }, { variant: 'neutral' });
     b.classList.add('btn--sm');
     list.append(h('li', { class: 'row' },
-      h('span', { class: 'row__icon', text: SLOT_ICONS[def.slot] }),
+      h('span', { class: `row__icon r-border-${def.rarity}` }, itemIcon(g.key)),
       h('div', { class: 'row__main' }, itemName(g.key, g.enchant), h('div', { class: 'row__meta' }, `${gearStatText(def, g.enchant)}　`, h('span', { class: 'c-gold', text: `售價 ${sellPrice(def, g.enchant).toLocaleString()} 金幣` }))),
       h('div', { class: 'row__actions' }, b),
     ));

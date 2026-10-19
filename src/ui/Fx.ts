@@ -28,13 +28,6 @@ export class Fx {
     this.float(text, r.width / 2, r.height * 0.72, kind);
   }
 
-  /** color 需含透明度，例如 rgba(255,0,0,0.5) */
-  flash(color: string): void {
-    const el = h('div', { class: 'flash', style: { background: `radial-gradient(ellipse at center, transparent 25%, ${color})` } });
-    this.stage.append(el);
-    window.setTimeout(() => el.remove(), 500);
-  }
-
   claw(): void {
     const el = h('div', { class: 'claw' });
     for (let i = 0; i < 3; i++) {

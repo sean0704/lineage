@@ -4,6 +4,7 @@ import type { CombatState } from '../systems/combat';
 import { countOf } from '../systems/inventory';
 import { getStats, MAX_LEVEL, xpToNext } from '../systems/progression';
 import { $, h } from './dom';
+import { itemIcon } from './icons';
 
 export const QUICK_ITEMS = ['redPotion', 'orangePotion', 'whitePotion', 'bluePotion', 'greenPotion', 'bravePotion', 'antidote', 'teleportHomeScroll'] as const;
 
@@ -31,7 +32,7 @@ export class Hud {
         on: { click: () => onQuickUse(key) },
       },
       h('span', { class: 'slot__key', text: String(i + 1) }),
-      h('span', { class: 'slot__icon', text: def.icon }),
+      h('span', { class: 'slot__icon' }, itemIcon(key, 26)),
       h('span', { class: 'slot__count', text: '0' }));
       this.el.quickbar.append(b);
       return b;

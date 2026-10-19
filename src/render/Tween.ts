@@ -31,6 +31,8 @@ interface Active {
  */
 export class Tweens {
   private active: Active[] = [];
+  /** 時間倍率：命中停頓時暫時調低 */
+  timeScale = 1;
 
   /** duration 單位為毫秒 */
   to(duration: number, onUpdate: (k: number) => void, opts: { easing?: Easing; delay?: number } = {}): Promise<void> {
@@ -50,8 +52,9 @@ export class Tweens {
     return this.to(ms, () => {}, { easing: ease.linear });
   }
 
-  update(dtMs: number): void {
+  update(rawDtMs: number): void {
     if (!this.active.length) return;
+    const dtMs = rawDtMs * this.timeScale;
     const done: Active[] = [];
     for (const tw of this.active) {
       let step = dtMs;

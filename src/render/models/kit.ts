@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { enhanceMaterial } from '../materialFx';
 import { glow } from '../textures';
 
 export interface MatOpts {
@@ -30,6 +31,7 @@ export class Kit {
         emissiveIntensity: o.emissiveIntensity ?? 1,
         flatShading: o.flat ?? true,
       });
+      enhanceMaterial(m, { rim: true, groundAO: 0.45, mottle: o.emissive ? 0 : 0.16 });
       m.userData.baseEmissive = m.emissive.getHex();
       m.userData.baseEmissiveIntensity = m.emissiveIntensity;
       this.matCache.set(key, m);
@@ -40,7 +42,8 @@ export class Kit {
 
   /** 自發光材質（眼睛、魔法、火焰） */
   glowMat(color: number, intensity = 2.5): THREE.MeshStandardMaterial {
-    return this.mat(color, { emissive: color, emissiveIntensity: intensity, rough: 0.4 });
+    // 後製泛光會放大自發光，這裡的強度要保守
+    return this.mat(color, { emissive: color, emissiveIntensity: intensity * 0.5, rough: 0.4 });
   }
 
   mesh(geo: THREE.BufferGeometry, mat: THREE.Material): THREE.Mesh {

@@ -18,6 +18,8 @@ import { Effects } from '../render/effects';
 import { HeroView } from '../render/HeroView';
 import { CELL, type AttackStyle, type MonsterView } from '../render/MonsterView';
 import { Renderer } from '../render/Renderer';
+import type { Quality } from '../render/PostFX';
+import { loadSettings, saveSettings, type Settings } from './settings';
 import { ease, lerpAngle } from '../render/Tween';
 import { VillageView } from '../render/VillageView';
 import { $, btn, h } from '../ui/dom';
@@ -36,6 +38,9 @@ const MAGIC_MOVES = new Set(['iceLance', 'blizzard', 'hellfire', 'gaze', 'drain'
 
 const yawFor = (dir: Dir) => -dir * (Math.PI / 2);
 
+/** 樓層環境音的頻率 → 配樂主音（MIDI，升高兩個八度） */
+const musicRoot = (droneHz: number) => Math.round(12 * Math.log2(droneHz / 440) + 69) + 24;
+
 export class Game implements PanelHost {
   readonly renderer: Renderer;
   readonly modal = new Modal();
@@ -51,6 +56,7 @@ export class Game implements PanelHost {
   private readonly dpadEl = $('dpad');
 
   player: PlayerState = createInitialPlayer();
+  private readonly settings: Settings = loadSettings();
   private runSeed = randomSeed();
   private rng: Rng = createRng(randomSeed());
   private mode: Mode = 'title';
@@ -63,22 +69,23 @@ export class Game implements PanelHost {
   private pendingStairs: 'up' | 'down' | null = null;
   private floorVisits = 0;
   private saveTimer = 0;
+  private stopTitleOrbit: (() => void) | null = null;
   /** 玩家手持火把的光源，跟著攝影機移動 */
-  private readonly handLight = new THREE.PointLight(0xffb070, 6.5, 11, 1.4);
+  private readonly handLight = new THREE.PointLight(0xffb27a, 7, 12, 1.6);
 
   constructor() {
-    this.renderer = new Renderer($('viewport'));
+    this.renderer = new Renderer($('viewport'), this.settings.quality);
     this.effects = new Effects(this.renderer.tweens);
     this.renderer.scene.add(this.effects.group);
     this.hero = new HeroView(this.renderer.camera);
-    this.handLight.position.set(0.3, 0.1, 0.2);
+    this.handLight.position.set(0.35, 0.25, 0.1);
     this.handLight.visible = false;
     this.renderer.rig.add(this.handLight);
     this.hud = new Hud((key) => this.quickUse(key));
     this.renderer.onFrame((dt, t) => {
       this.effects.update(dt);
       this.hero.update(dt);
-      if (this.handLight.visible) this.handLight.intensity = 6.5 + Math.sin(t * 2.7) * 0.4 + Math.sin(t * 4.3) * 0.25;
+      if (this.handLight.visible) this.handLight.intensity = 7 + Math.sin(t * 2.7) * 0.35 + Math.sin(t * 4.3) * 0.25;
     });
     this.bindInput();
     this.buildDpad();
@@ -129,11 +136,11 @@ export class Game implements PanelHost {
     const name = getItem(res.gear.key).name;
     if (res.outcome === 'success') {
       audio.enchantSuccess();
-      this.fx.flash('rgba(120,180,255,0.45)');
+      this.renderer.post.pulse(0x78b4ff, 0.45);
       this.say(`${name} 散發出一陣藍光……強化成功！現在是 +${res.gear.enchant}。`, 'level');
     } else {
       audio.enchantFail();
-      this.fx.flash('rgba(255,255,255,0.6)');
+      this.renderer.post.pulse(0xffffff, 0.6);
       this.say(`${name} 發出強烈的光芒後……蒸發消失了。`, 'hurt');
       this.fx.showBanner('裝備蒸發了……', `+${res.gear.enchant} ${name}`, 'warn');
     }
@@ -174,6 +181,7 @@ export class Game implements PanelHost {
     this.mode = 'title';
     this.renderer.setView(new VillageView(this.effects));
     this.placeVillageCamera();
+    this.startTitleOrbit();
     this.hero.group.visible = false;
     this.handLight.visible = false;
     const title = $('title');
@@ -194,6 +202,25 @@ export class Game implements PanelHost {
     note.textContent = hasLegacySave(this.storage) ? '偵測到舊版（v1）存檔，因數值系統全面重製已無法沿用。' : '';
     this.renderActions();
     this.refresh();
+    audio.setAmbient('village');
+    audio.setMusic('village');
+  }
+
+  /** 標題畫面時鏡頭繞營火緩慢環繞（遊玩中不會有任何鏡頭搖擺） */
+  private startTitleOrbit(): void {
+    this.stopTitleOrbit?.();
+    const start = performance.now();
+    this.stopTitleOrbit = this.renderer.onFrame(() => {
+      if (this.mode !== 'title') {
+        this.stopTitleOrbit?.();
+        this.stopTitleOrbit = null;
+        return;
+      }
+      const a = ((performance.now() - start) / 1000) * 0.06 + 0.2;
+      this.renderer.rig.position.set(Math.sin(a) * 6.2, 1.9, Math.cos(a) * 6.2);
+      this.renderer.rig.rotation.set(0, 0, 0);
+      this.renderer.camera.lookAt(0, 0.9, 0);
+    });
   }
 
   private hideTitle(): void {
@@ -270,6 +297,7 @@ export class Game implements PanelHost {
     this.handLight.visible = false;
     this.hud.setLocation('奇岩村', '安全區域');
     audio.setAmbient('village');
+    audio.setMusic('village');
     this.renderActions();
     this.refresh();
     this.save();
@@ -315,6 +343,7 @@ export class Game implements PanelHost {
     this.mode = 'dungeon';
     this.hud.setLocation(`古魯丁地監 地下 ${floor} 層`, theme.name);
     audio.setAmbient('dungeon', theme.drone);
+    audio.setMusic('dungeon', musicRoot(theme.drone));
     this.renderActions();
     this.refresh();
     this.save();
@@ -619,6 +648,8 @@ export class Game implements PanelHost {
       await this.turnCamera(dirIdx, 220);
     }
     await this.dolly(monster.boss || monster.def.model.kind !== 'humanoid' || (monster.def.model as { scale: number }).scale > 1.2 ? 0.75 : 0.45);
+    const root = musicRoot(getFloor(this.dungeon!.floor).theme.drone);
+    audio.setMusic(monster.boss ? 'boss' : 'combat', root);
     if (monster.boss) {
       audio.bossAlert();
       this.renderer.shake(0.08, 900);
@@ -691,7 +722,11 @@ export class Game implements PanelHost {
             void view.hit(tw, heavy);
             const p = this.project(view.anchor());
             this.fx.float(ev.crit ? `${ev.dmg}!` : String(ev.dmg), p.x, p.y, ev.crit ? 'crit' : 'dmg');
-            if (ev.crit) this.renderer.shake(0.05, 220);
+            if (ev.crit || heavy) this.renderer.hitStop(ev.crit ? 110 : 70);
+            if (ev.crit) {
+              this.renderer.shake(0.05, 220);
+              this.renderer.post.impact(1);
+            }
             this.say(ev.text, 'hit');
           } else {
             audio.miss();
@@ -707,7 +742,7 @@ export class Game implements PanelHost {
         }
         case 'heroHeal':
           audio.potion();
-          this.fx.flash('rgba(72,187,120,0.45)');
+          this.renderer.post.pulse(0x48bb78, 0.45);
           this.fx.floatSelf(`+${ev.amount}`, 'heal');
           this.effects.burst(this.cameraPoint(1.2), { color: 0x68d391, count: 24, speed: 0.8, lift: 1, gravity: 0.3, life: 0.9, spread: 0.8 });
           this.say(ev.text, 'heal');
@@ -716,7 +751,7 @@ export class Game implements PanelHost {
           break;
         case 'heroMana':
           audio.potion();
-          this.fx.flash('rgba(66,153,225,0.45)');
+          this.renderer.post.pulse(0x4299e1, 0.45);
           this.fx.floatSelf(`+${ev.amount} MP`, 'mp');
           this.say(ev.text, 'heal');
           this.refresh();
@@ -724,7 +759,7 @@ export class Game implements PanelHost {
           break;
         case 'heroBuff':
           audio.magic();
-          this.fx.flash('rgba(246,210,107,0.35)');
+          this.renderer.post.pulse(0xf6d26b, 0.35);
           this.effects.burst(this.cameraPoint(1.2), { color: 0xf6d26b, count: 30, speed: 1.2, lift: 0.8, gravity: 0, life: 0.9, spread: 1 });
           this.say(ev.text, 'heal');
           this.refresh();
@@ -752,7 +787,8 @@ export class Game implements PanelHost {
           const impact = async () => {
             if (ev.kind === 'monsterHit') {
               audio.hurt(ev.heavy);
-              this.fx.flash(ev.heavy ? 'rgba(229,62,62,0.75)' : 'rgba(229,62,62,0.45)');
+              this.renderer.post.hurt(ev.heavy ? 0.85 : 0.5);
+              this.renderer.post.impact(ev.heavy ? 1.6 : 0.8);
               if (style === 'melee') this.fx.claw();
               this.fx.floatSelf(`-${ev.dmg}`, 'hurt');
               this.renderer.shake(ev.heavy ? 0.16 : 0.07, ev.heavy ? 500 : 260);
@@ -763,7 +799,7 @@ export class Game implements PanelHost {
               this.say(ev.text, 'sys');
             } else {
               audio.block();
-              this.fx.flash('rgba(99,179,237,0.5)');
+              this.renderer.post.pulse(0x63b3ed, 0.5);
               this.fx.floatSelf('格擋', 'info');
               if (view) {
                 const camQ = new THREE.Quaternion();
@@ -793,7 +829,7 @@ export class Game implements PanelHost {
         }
         case 'poisonTick':
           audio.hurt(false);
-          this.fx.flash('rgba(120,200,80,0.45)');
+          this.renderer.post.pulse(0x78c850, 0.45);
           this.fx.floatSelf(`-${ev.dmg}`, 'hurt');
           this.say(ev.text, 'hurt');
           this.refresh();
@@ -821,7 +857,7 @@ export class Game implements PanelHost {
           await tw.wait(350);
           break;
         case 'heroParalyzed':
-          this.fx.flash('rgba(251,211,141,0.4)');
+          this.renderer.post.pulse(0xfbd38d, 0.4);
           this.say(ev.text, 'warn');
           await tw.wait(500);
           break;
@@ -835,7 +871,7 @@ export class Game implements PanelHost {
           await tw.wait(600);
           break;
         case 'mpDrain':
-          this.fx.flash('rgba(66,100,225,0.4)');
+          this.renderer.post.pulse(0x4264e1, 0.4);
           this.fx.floatSelf(`-${ev.amount} MP`, 'mp');
           this.say(ev.text, 'hurt');
           this.refresh();
@@ -862,7 +898,7 @@ export class Game implements PanelHost {
           break;
         case 'heroDefeated':
           audio.death();
-          this.fx.flash('rgba(120,0,0,0.9)');
+          this.renderer.post.pulse(0x780000, 0.9);
           this.say(ev.text, 'hurt');
           await this.renderer.tweens.to(900, (k) => {
             this.renderer.rig.position.y = EYE_HEIGHT - k * 1.05;
@@ -908,6 +944,7 @@ export class Game implements PanelHost {
 
     this.combat = null;
     this.mode = 'dungeon';
+    audio.setMusic('dungeon', musicRoot(getFloor(d.floor).theme.drone));
     await Promise.all([this.dolly(0), this.hero.defend(this.renderer.tweens, false)]);
     this.syncHeroEquipment();
     this.drawMap();
@@ -934,8 +971,8 @@ export class Game implements PanelHost {
   private celebrateLevelUps(ups: LevelUpInfo[]): void {
     if (!ups.length) return;
     audio.levelUp();
-    this.effects.levelUp(this.cameraPoint(1.5));
-    this.fx.flash('rgba(246,210,107,0.5)');
+    this.effects.levelUp(this.cameraPoint(2.6));
+    this.renderer.post.pulse(0xf6d26b, 0.5);
     const last = ups[ups.length - 1];
     const skills = ups.flatMap((u) => u.newSkills);
     this.fx.showBanner(`等級提升！Lv.${last.level}`, skills.length ? `習得新技能：${skills.map((s) => s.name).join('、')}` : '體力與魔力已完全恢復', 'level', 3000);
@@ -947,6 +984,7 @@ export class Game implements PanelHost {
 
   private async handleDeath(): Promise<void> {
     this.mode = 'dead';
+    audio.setMusic(null);
     this.combat = null;
     this.renderActions();
     await this.renderer.tweens.wait(500);
@@ -1011,7 +1049,7 @@ export class Game implements PanelHost {
     this.say(r.text, 'heal');
     if (r.teleport) {
       audio.magic();
-      this.fx.flash('rgba(99,179,237,0.7)');
+      this.renderer.post.pulse(0x63b3ed, 0.7);
       if (this.modal.isOpen) this.modal.close(true);
       this.run(() => this.goVillage());
       return;
@@ -1019,12 +1057,12 @@ export class Game implements PanelHost {
     audio.potion();
     if (r.heal) {
       this.fx.floatSelf(`+${r.heal}`, 'heal');
-      this.fx.flash('rgba(72,187,120,0.35)');
+      this.renderer.post.pulse(0x48bb78, 0.35);
     } else if (r.mana) {
       this.fx.floatSelf(`+${r.mana} MP`, 'mp');
-      this.fx.flash('rgba(66,153,225,0.35)');
+      this.renderer.post.pulse(0x4299e1, 0.35);
     } else {
-      this.fx.flash('rgba(246,210,107,0.3)');
+      this.renderer.post.pulse(0xf6d26b, 0.3);
     }
     this.refresh();
     this.scheduleSave();
@@ -1068,7 +1106,7 @@ export class Game implements PanelHost {
           fullRestore(this.player);
           this.modal.close();
           audio.potion();
-          this.fx.flash('rgba(246,210,107,0.35)');
+          this.renderer.post.pulse(0xf6d26b, 0.35);
           this.say('你在旅館好好睡了一覺，體力與魔力完全恢復了。', 'heal');
           this.refresh();
           this.save();
@@ -1095,13 +1133,29 @@ export class Game implements PanelHost {
     if (this.mode === 'title') return;
     const volume = h('input', { class: 'range', attrs: { type: 'range', min: '0', max: '100', value: String(Math.round(audio.volume * 100)), 'aria-label': '音量' } });
     volume.addEventListener('input', () => audio.setVolume(Number(volume.value) / 100));
+    const music = h('input', { class: 'range', attrs: { type: 'range', min: '0', max: '100', value: String(Math.round(audio.musicVolume * 100)), 'aria-label': '音樂音量' } });
+    music.addEventListener('input', () => audio.setMusicVolume(Number(music.value) / 100));
     const mute = btn(audio.muted ? '🔇 已靜音' : '🔊 音效開啟', () => {
       audio.setMuted(!audio.muted);
       mute.firstChild!.textContent = audio.muted ? '🔇 已靜音' : '🔊 音效開啟';
     }, { variant: 'ghost' });
+    const qualityRow = h('div', { class: 'segmented', attrs: { role: 'radiogroup', 'aria-label': '畫質' } });
+    const qualities: [Quality, string][] = [['high', '高'], ['medium', '中'], ['low', '低']];
+    const renderQuality = () => {
+      qualityRow.replaceChildren(...qualities.map(([q, label]) => h('button', {
+        class: `segmented__item${this.settings.quality === q ? ' is-active' : ''}`, type: 'button', text: label,
+        attrs: { role: 'radio', 'aria-checked': String(this.settings.quality === q) },
+        on: { click: () => this.setQuality(q, renderQuality) },
+      })));
+    };
+    renderQuality();
     const body = h('div', {},
       h('h3', { class: 'section-title', text: '音效' }),
       h('div', { style: { display: 'flex', gap: '0.75rem', alignItems: 'center' } }, mute, volume),
+      h('div', { style: { display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem' } }, h('span', { class: 'row__meta', text: '音樂', style: { minWidth: '6.6rem' } }), music),
+      h('h3', { class: 'section-title', text: '畫質' }),
+      qualityRow,
+      h('p', { class: 'row__meta', text: '高：泛光＋多重取樣抗鋸齒；中：適合筆電與手機；低：關閉泛光，最省電。' }),
       h('h3', { class: 'section-title', text: '冒險統計' }),
       statsBody(this.player),
     );
@@ -1120,6 +1174,14 @@ export class Game implements PanelHost {
         btn('繼續遊戲', () => this.modal.close(), { variant: 'gold' }),
       ],
     });
+  }
+
+  private setQuality(q: Quality, rerender: () => void): void {
+    this.settings.quality = q;
+    saveSettings(this.settings);
+    this.renderer.post.setQuality(q);
+    audio.click();
+    rerender();
   }
 
   // ═════════════════════ 畫面同步 ═════════════════════
@@ -1191,6 +1253,7 @@ export class Game implements PanelHost {
   debugApi() {
     return {
       game: this,
+      audio,
       floor: (n: number) => this.run(() => this.enterFloor(Math.max(1, Math.min(MAX_FLOOR, n)), 'up')),
       xp: (n: number) => { this.celebrateLevelUps(gainXp(this.player, n)); this.refresh(); },
       gold: (n: number) => { this.player.gold += n; this.refresh(); },

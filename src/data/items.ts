@@ -48,7 +48,6 @@ export interface EquipDef extends ItemBase {
 
 export interface ConsumableDef extends ItemBase {
   kind: 'consumable';
-  icon: string;
   effect: ConsumableEffect;
   /** 是否可在戰鬥中使用 */
   combat: boolean;
@@ -61,17 +60,17 @@ export const SAFE_ENCHANT: Record<'weapon' | 'armor', number> = { weapon: 6, arm
 export const MAX_ENCHANT = 12;
 
 const consumables: ConsumableDef[] = [
-  { key: 'redPotion', name: '紅色藥水', kind: 'consumable', rarity: 'common', icon: '🔴', price: 20, combat: true, effect: { type: 'heal', amount: 30 }, desc: '恢復 30 點體力。' },
-  { key: 'orangePotion', name: '橙色藥水', kind: 'consumable', rarity: 'common', icon: '🟠', price: 70, combat: true, effect: { type: 'heal', amount: 80 }, desc: '恢復 80 點體力。' },
-  { key: 'whitePotion', name: '白色藥水', kind: 'consumable', rarity: 'uncommon', icon: '⚪', price: 180, combat: true, effect: { type: 'heal', amount: 180 }, desc: '恢復 180 點體力。' },
-  { key: 'bluePotion', name: '藍色藥水', kind: 'consumable', rarity: 'common', icon: '🔵', price: 50, combat: true, effect: { type: 'mana', amount: 25 }, desc: '恢復 25 點魔力。' },
-  { key: 'greenPotion', name: '綠色藥水', kind: 'consumable', rarity: 'uncommon', icon: '🟢', price: 120, combat: true, effect: { type: 'haste', turns: 10 }, desc: '自我加速 10 回合：攻擊後有 35% 機率追加一擊。' },
-  { key: 'bravePotion', name: '勇敢藥水', kind: 'consumable', rarity: 'rare', icon: '🟣', price: 300, combat: true, effect: { type: 'brave', turns: 10 }, desc: '勇氣激昂 10 回合：暴擊率 +15%、傷害 +15%。' },
-  { key: 'antidote', name: '翡翠藥水', kind: 'consumable', rarity: 'common', icon: '💚', price: 30, combat: true, effect: { type: 'cure' }, desc: '解除中毒與麻痺。' },
-  { key: 'elvenWafer', name: '精靈餅乾', kind: 'consumable', rarity: 'uncommon', icon: '🍪', price: 0, combat: true, effect: { type: 'restore', hp: 60, mp: 15 }, desc: '妖精的乾糧，恢復 60 體力與 15 魔力。' },
-  { key: 'teleportHomeScroll', name: '傳送回家的卷軸', kind: 'consumable', rarity: 'common', icon: '📜', price: 60, combat: false, effect: { type: 'teleportHome' }, desc: '立即傳送回奇岩村。戰鬥中無法使用。' },
-  { key: 'scrollEnchantWeapon', name: '對武器施法的卷軸', kind: 'consumable', rarity: 'rare', icon: '✨', price: 900, combat: false, effect: { type: 'enchant', target: 'weapon' }, desc: '使裝備中的武器 +1。超過安定值 +6 後有機率蒸發。' },
-  { key: 'scrollEnchantArmor', name: '對盔甲施法的卷軸', kind: 'consumable', rarity: 'rare', icon: '🛡️', price: 600, combat: false, effect: { type: 'enchant', target: 'armor' }, desc: '使選定的防具 +1。超過安定值 +4 後有機率蒸發。' },
+  { key: 'redPotion', name: '紅色藥水', kind: 'consumable', rarity: 'common', price: 20, combat: true, effect: { type: 'heal', amount: 30 }, desc: '恢復 30 點體力。' },
+  { key: 'orangePotion', name: '橙色藥水', kind: 'consumable', rarity: 'common', price: 70, combat: true, effect: { type: 'heal', amount: 80 }, desc: '恢復 80 點體力。' },
+  { key: 'whitePotion', name: '白色藥水', kind: 'consumable', rarity: 'uncommon', price: 180, combat: true, effect: { type: 'heal', amount: 180 }, desc: '恢復 180 點體力。' },
+  { key: 'bluePotion', name: '藍色藥水', kind: 'consumable', rarity: 'common', price: 50, combat: true, effect: { type: 'mana', amount: 25 }, desc: '恢復 25 點魔力。' },
+  { key: 'greenPotion', name: '綠色藥水', kind: 'consumable', rarity: 'uncommon', price: 120, combat: true, effect: { type: 'haste', turns: 10 }, desc: '自我加速 10 回合：攻擊後有 35% 機率追加一擊。' },
+  { key: 'bravePotion', name: '勇敢藥水', kind: 'consumable', rarity: 'rare', price: 300, combat: true, effect: { type: 'brave', turns: 10 }, desc: '勇氣激昂 10 回合：暴擊率 +15%、傷害 +15%。' },
+  { key: 'antidote', name: '翡翠藥水', kind: 'consumable', rarity: 'common', price: 30, combat: true, effect: { type: 'cure' }, desc: '解除中毒與麻痺。' },
+  { key: 'elvenWafer', name: '精靈餅乾', kind: 'consumable', rarity: 'uncommon', price: 0, combat: true, effect: { type: 'restore', hp: 60, mp: 15 }, desc: '妖精的乾糧，恢復 60 體力與 15 魔力。' },
+  { key: 'teleportHomeScroll', name: '傳送回家的卷軸', kind: 'consumable', rarity: 'common', price: 60, combat: false, effect: { type: 'teleportHome' }, desc: '立即傳送回奇岩村。戰鬥中無法使用。' },
+  { key: 'scrollEnchantWeapon', name: '對武器施法的卷軸', kind: 'consumable', rarity: 'rare', price: 900, combat: false, effect: { type: 'enchant', target: 'weapon' }, desc: '使裝備中的武器 +1。超過安定值 +6 後有機率蒸發。' },
+  { key: 'scrollEnchantArmor', name: '對盔甲施法的卷軸', kind: 'consumable', rarity: 'rare', price: 600, combat: false, effect: { type: 'enchant', target: 'armor' }, desc: '使選定的防具 +1。超過安定值 +4 後有機率蒸發。' },
 ];
 
 const equipment: EquipDef[] = [

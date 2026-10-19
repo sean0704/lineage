@@ -3,6 +3,8 @@
  * 所有聲音經過 master gain；第一次使用者互動時才建立/恢復 AudioContext。
  * 任何錯誤都只會讓聲音消失，絕不中斷遊戲。
  */
+import { Music, type MusicKind } from './Music';
+
 const SETTINGS_KEY = 'lineage3d.audio';
 
 type Wave = OscillatorType;
@@ -16,16 +18,20 @@ class AudioEngine {
   private ambientKind: string | null = null;
   private pendingAmbient: ['village' | 'dungeon' | null, number] | null = null;
   private noiseBuffer: AudioBuffer | null = null;
+  private music: Music | null = null;
+  private pendingMusic: [MusicKind | null, number] | null = null;
   muted = false;
   volume = 0.7;
+  musicVolume = 0.55;
 
   constructor() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
-        const s = JSON.parse(raw) as { muted?: boolean; volume?: number };
+        const s = JSON.parse(raw) as { muted?: boolean; volume?: number; musicVolume?: number };
         this.muted = !!s.muted;
         if (typeof s.volume === 'number') this.volume = Math.max(0, Math.min(1, s.volume));
+        if (typeof s.musicVolume === 'number') this.musicVolume = Math.max(0, Math.min(1, s.musicVolume));
       }
     } catch {
       /* 偏好設定讀取失敗時使用預設值 */
@@ -51,8 +57,15 @@ class AudioEngine {
         this.noiseBuffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        this.music = new Music(this.ctx, this.master, this.noiseBuffer);
+        this.music.setVolume(this.musicVolume);
       }
       if (this.ctx.state === 'suspended') void this.ctx.resume();
+      if (this.pendingMusic) {
+        const [kind, root] = this.pendingMusic;
+        this.pendingMusic = null;
+        this.setMusic(kind, root);
+      }
       if (this.pendingAmbient) {
         const [kind, pitch] = this.pendingAmbient;
         this.pendingAmbient = null;
@@ -75,9 +88,28 @@ class AudioEngine {
     this.persist();
   }
 
+  setMusicVolume(v: number): void {
+    this.musicVolume = Math.max(0, Math.min(1, v));
+    this.music?.setVolume(this.musicVolume);
+    this.persist();
+  }
+
+  /** 切換背景音樂（root 為主音的 MIDI 音高） */
+  setMusic(kind: MusicKind | null, root = 50): void {
+    if (!this.music || !this.ready()) {
+      this.pendingMusic = [kind, root];
+      return;
+    }
+    try {
+      this.music.play(kind, root);
+    } catch {
+      /* 音樂失敗時保持安靜 */
+    }
+  }
+
   private persist(): void {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ muted: this.muted, volume: this.volume }));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ muted: this.muted, volume: this.volume, musicVolume: this.musicVolume }));
     } catch {
       /* 無法儲存偏好時忽略 */
     }

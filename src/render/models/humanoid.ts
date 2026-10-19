@@ -16,7 +16,7 @@ export function buildHumanoid(spec: HumanoidSpec, kit = new Kit()): Rig {
 
   const skin = kit.mat(spec.skin, { rough: bony ? 0.6 : 0.8 });
   const cloth = kit.mat(spec.cloth, { rough: 0.95 });
-  const metal = spec.metal !== undefined ? kit.mat(spec.metal, { metal: 0.5, rough: 0.4 }) : null;
+  const metal = spec.metal !== undefined ? kit.mat(spec.metal, { metal: 0.8, rough: 0.38 }) : null;
   const dark = kit.mat(0x1a1612, { rough: 0.9 });
   const eye = kit.glowMat(spec.eye, 3);
 
@@ -35,15 +35,24 @@ export function buildHumanoid(spec: HumanoidSpec, kit = new Kit()): Rig {
     const knee = new THREE.Group();
     knee.position.set(0, -0.42, 0.02);
     hip.add(knee);
+    if (!bony) {
+      knee.add(kit.mesh(new THREE.IcosahedronGeometry(thighR * 0.85, 1), cloth));
+    }
     const shinR = bony ? 0.028 : 0.058 * b;
     knee.add(kit.limb(v3(0, 0, 0), v3(0, -0.38, -0.02), shinR, shinR * 0.85, metal && !bony ? metal : skin));
     if (bony) {
       const kneeCap = kit.mesh(new THREE.IcosahedronGeometry(0.04, 0), skin);
       knee.add(kneeCap);
     }
-    const foot = kit.mesh(new THREE.BoxGeometry(0.1 * b, 0.06, 0.2), metal ?? dark);
+    const bootMat = metal ?? dark;
+    const foot = kit.mesh(new THREE.BoxGeometry(0.11 * b, 0.07, 0.22), bootMat);
     foot.position.set(0, -0.4, 0.05);
     knee.add(foot);
+    if (!bony) {
+      const cuff = kit.mesh(new THREE.CylinderGeometry(shinR * 1.25, shinR * 1.1, 0.12, 8), bootMat);
+      cuff.position.set(0, -0.32, -0.015);
+      knee.add(cuff);
+    }
     return hip;
   });
 
@@ -72,18 +81,37 @@ export function buildHumanoid(spec: HumanoidSpec, kit = new Kit()): Rig {
     (rag.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
     spine.add(rag);
   } else {
-    const torso = kit.mesh(new THREE.CylinderGeometry(0.2 * b, 0.15 * b, 0.58, 7), cloth);
-    torso.position.y = 0.3;
-    torso.scale.z = 0.75;
+    // 旋轉曲面軀幹：骨盆 → 細腰 → 寬胸 → 肩頸
+    const profile = [
+      [0.0, 0.02], [0.15, 0.02], [0.155, 0.1], [0.135, 0.2], [0.165, 0.34], [0.2, 0.46], [0.19, 0.55], [0.12, 0.61], [0.0, 0.63],
+    ].map(([r, y]) => new THREE.Vector2(r * b, y));
+    const torso = kit.mesh(new THREE.LatheGeometry(profile, 9), cloth);
+    torso.scale.z = 0.72;
     spine.add(torso);
-    const belt = kit.mesh(new THREE.CylinderGeometry(0.16 * b, 0.16 * b, 0.06, 7), kit.mat(0x2a1a10));
-    belt.position.y = 0.05;
-    belt.scale.z = 0.78;
+    const beltMat = kit.mat(0x2a1a10, { rough: 0.7 });
+    const belt = kit.mesh(new THREE.CylinderGeometry(0.16 * b, 0.165 * b, 0.07, 9), beltMat);
+    belt.position.y = 0.09;
+    belt.scale.z = 0.76;
     spine.add(belt);
-    // 圍腰布
-    const loin = kit.mesh(new THREE.BoxGeometry(0.16 * b, 0.22, 0.02), cloth);
-    loin.position.set(0, -0.08, 0.12 * b);
-    spine.add(loin);
+    const buckle = kit.mesh(new THREE.BoxGeometry(0.06, 0.05, 0.02), kit.mat(0xb8903a, { metal: 0.9, rough: 0.3 }));
+    buckle.position.set(0, 0.09, 0.125 * b);
+    spine.add(buckle);
+    const pouch = kit.mesh(new THREE.BoxGeometry(0.07, 0.08, 0.05), beltMat);
+    pouch.position.set(0.13 * b, 0.05, 0.06 * b);
+    pouch.rotation.y = 0.5;
+    spine.add(pouch);
+    // 鋸齒下擺的外衣裙襬
+    const skirtGeo = new THREE.CylinderGeometry(0.165 * b, 0.21 * b, 0.26, 12, 1, true);
+    const pos = skirtGeo.getAttribute('position') as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) < 0) pos.setY(i, pos.getY(i) - (i % 2) * 0.06);
+    }
+    const skirtMat = kit.mat(new THREE.Color(spec.cloth).multiplyScalar(0.8).getHex(), { rough: 1 });
+    skirtMat.side = THREE.DoubleSide;
+    const skirt = kit.mesh(skirtGeo, skirtMat);
+    skirt.position.y = -0.04;
+    skirt.scale.z = 0.8;
+    spine.add(skirt);
   }
   if (metal) {
     const plate = kit.mesh(new THREE.CylinderGeometry(0.215 * b, 0.17 * b, 0.34, 7, 1, false, -Math.PI / 2, Math.PI), metal);
@@ -128,15 +156,19 @@ export function buildHumanoid(spec: HumanoidSpec, kit = new Kit()): Rig {
     spine.add(shoulder);
     const r = bony ? 0.026 : 0.055 * b;
     shoulder.add(kit.limb(v3(0, 0, 0), v3(side * 0.03, -0.32, 0), r, r * 0.85, bony ? skin : spec.metal !== undefined ? cloth : skin));
+    if (!bony) shoulder.add(kit.mesh(new THREE.IcosahedronGeometry(r * 1.02, 1), spec.metal !== undefined ? cloth : skin));
     const elbow = new THREE.Group();
     elbow.position.set(side * 0.03, -0.32, 0);
     elbow.rotation.x = -0.7;
     shoulder.add(elbow);
+    if (!bony) elbow.add(kit.mesh(new THREE.IcosahedronGeometry(r * 0.9, 1), skin));
     elbow.add(kit.limb(v3(0, 0, 0), v3(0, -0.3, 0), r * 0.85, r * 0.7, skin));
     const hand = new THREE.Group();
     hand.position.y = -0.32;
     elbow.add(hand);
-    hand.add(kit.mesh(new THREE.IcosahedronGeometry(bony ? 0.035 : 0.05 * b, 0), skin));
+    const fist = kit.mesh(new THREE.IcosahedronGeometry(bony ? 0.035 : 0.055 * b, 1), skin);
+    fist.scale.set(0.9, 1.1, 1);
+    hand.add(fist);
     return { shoulder, elbow, hand };
   });
 
@@ -161,7 +193,7 @@ export function buildHumanoid(spec: HumanoidSpec, kit = new Kit()): Rig {
     const shield = kit.mesh(new THREE.CylinderGeometry(0.22 * b, 0.22 * b, 0.04, 10), metal ?? kit.mat(0x6a4a2a));
     shield.rotation.x = Math.PI / 2;
     shield.position.set(-0.05, -0.18, 0.08);
-    const boss = kit.mesh(new THREE.SphereGeometry(0.06, 6, 4), kit.mat(0xc8a040, { metal: 0.5, rough: 0.35 }));
+    const boss = kit.mesh(new THREE.SphereGeometry(0.06, 6, 4), kit.mat(0xc8a040, { metal: 0.9, rough: 0.3 }));
     boss.position.set(-0.05, -0.18, 0.11);
     arms[0].elbow.add(shield, boss);
   }

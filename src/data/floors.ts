@@ -1,4 +1,7 @@
+export type ThemeKey = 'stone' | 'moss' | 'arcane' | 'inferno';
+
 export interface FloorTheme {
+  key: ThemeKey;
   name: string;
   /** 背景與迷霧顏色 */
   fog: number;
@@ -12,6 +15,9 @@ export interface FloorTheme {
   ambient: number;
   /** 環境低頻音高（Hz） */
   drone: number;
+  /** 色彩分級：暗部與亮部色調 */
+  shadowTint: number;
+  highlightTint: number;
 }
 
 export interface FloorDef {
@@ -28,10 +34,10 @@ export interface FloorDef {
   theme: FloorTheme;
 }
 
-const stone: FloorTheme = { name: '冷石迴廊', fog: 0x0b0f17, fogDensity: 0.075, wallTint: 0x9aa4b8, floorTint: 0x7d8494, torch: 0xff9a4a, ambient: 0x2a3550, drone: 55 };
-const moss: FloorTheme = { name: '苔蘚墓穴', fog: 0x0a1410, fogDensity: 0.08, wallTint: 0x8aa890, floorTint: 0x6f8a74, torch: 0xffb04a, ambient: 0x1f3a2c, drone: 49 };
-const arcane: FloorTheme = { name: '秘術祭壇', fog: 0x120c1a, fogDensity: 0.08, wallTint: 0xa094b8, floorTint: 0x7c7090, torch: 0xc88aff, ambient: 0x2c2045, drone: 46 };
-const inferno: FloorTheme = { name: '煉獄深淵', fog: 0x1a0808, fogDensity: 0.085, wallTint: 0xb08a80, floorTint: 0x8a6a62, torch: 0xff6a2a, ambient: 0x401812, drone: 41 };
+const stone: FloorTheme = { key: 'stone', name: '冷石迴廊', fog: 0x0b0f17, fogDensity: 0.075, wallTint: 0x9aa4b8, floorTint: 0x7d8494, torch: 0xff9a4a, ambient: 0x2a3550, drone: 55, shadowTint: 0x7f9cc8, highlightTint: 0xffd9b0 };
+const moss: FloorTheme = { key: 'moss', name: '苔蘚墓穴', fog: 0x0a1410, fogDensity: 0.08, wallTint: 0x8aa890, floorTint: 0x6f8a74, torch: 0xffb04a, ambient: 0x1f3a2c, drone: 49, shadowTint: 0x7fb8a0, highlightTint: 0xffe0a8 };
+const arcane: FloorTheme = { key: 'arcane', name: '秘術祭壇', fog: 0x120c1a, fogDensity: 0.08, wallTint: 0xa094b8, floorTint: 0x7c7090, torch: 0xc88aff, ambient: 0x2c2045, drone: 46, shadowTint: 0xa08cd0, highlightTint: 0xffd0f0 };
+const inferno: FloorTheme = { key: 'inferno', name: '煉獄深淵', fog: 0x1a0808, fogDensity: 0.085, wallTint: 0xb08a80, floorTint: 0x8a6a62, torch: 0xff6a2a, ambient: 0x401812, drone: 41, shadowTint: 0xc07a6a, highlightTint: 0xffc890 };
 
 export const BOSS_ROTATION = ['sima', 'balthazar', 'casper', 'markus'] as const;
 

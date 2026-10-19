@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Effects } from './effects';
 import { Kit, v3 } from './models/kit';
+import { setRimColor } from './materialFx';
+import type { GradeSettings } from './PostFX';
 import type { View } from './Renderer';
 import { flame, glow, grass } from './textures';
 
@@ -9,6 +11,8 @@ export class VillageView implements View {
   readonly group = new THREE.Group();
   readonly background = 0x0c1220;
   readonly fogDensity = 0.035;
+  readonly environment = 0.06;
+  readonly grade: Partial<GradeSettings> = { shadowTint: 0x7a92d0, highlightTint: 0xffd8b0, bloom: 0.55, vignette: 0.5, saturation: 1.0 };
   private readonly kit = new Kit();
   private readonly fireLight: THREE.PointLight;
   private readonly flames: THREE.Sprite[] = [];
@@ -22,6 +26,7 @@ export class VillageView implements View {
 
   constructor(private readonly effects: Effects) {
     const k = this.kit;
+    setRimColor(0x6a86d8, 0.35);
 
     // 地面
     const grassTex = grass();
@@ -71,7 +76,7 @@ export class VillageView implements View {
     const halo = k.halo(0xff9a40, 3.5, 0.3);
     halo.position.y = 0.7;
     fire.add(halo);
-    this.fireLight = new THREE.PointLight(0xff9a50, 30, 18, 1.6);
+    this.fireLight = new THREE.PointLight(0xff9a50, 16, 18, 1.7);
     this.fireLight.position.set(0, 1.0, 0);
     fire.add(this.fireLight);
     this.group.add(fire);
@@ -219,7 +224,7 @@ export class VillageView implements View {
 
   update(dt: number, time: number): void {
     const flicker = Math.sin(time * 2.1) * 2.2 + Math.sin(time * 3.3 + 1) * 1.4;
-    this.fireLight.intensity = 30 + flicker;
+    this.fireLight.intensity = 16 + flicker * 0.6;
     for (const f of this.flames) {
       const seed = f.userData.seed as number;
       const base = f.userData.base as number;

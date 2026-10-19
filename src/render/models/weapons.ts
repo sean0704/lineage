@@ -16,11 +16,11 @@ const GOLD = 0xd4a83a;
  */
 export function buildWeapon(style: HeroWeaponStyle, kit: Kit, accent?: number): THREE.Group {
   const g = new THREE.Group();
-  const steel = kit.mat(STEEL, { metal: 0.45, rough: 0.3 });
-  const dark = kit.mat(DARK_STEEL, { metal: 0.4, rough: 0.45 });
+  const steel = kit.mat(STEEL, { metal: 0.9, rough: 0.28 });
+  const dark = kit.mat(DARK_STEEL, { metal: 0.8, rough: 0.4 });
   const wood = kit.mat(WOOD, { rough: 0.85 });
   const leather = kit.mat(LEATHER, { rough: 0.9 });
-  const gold = kit.mat(GOLD, { metal: 0.5, rough: 0.35 });
+  const gold = kit.mat(GOLD, { metal: 0.9, rough: 0.3 });
 
   const blade = (len: number, width: number, mat: THREE.Material) => {
     const shape = new THREE.Shape();

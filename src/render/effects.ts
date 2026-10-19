@@ -61,7 +61,7 @@ export class Effects {
   /** 從上而下環繞的升級光柱 */
   levelUp(at: THREE.Vector3): void {
     for (let i = 0; i < 3; i++) {
-      this.burst(at.clone().add(new THREE.Vector3(0, -0.8 + i * 0.3, 0)), { color: 0xffd23a, count: 40, speed: 1.2, lift: 2.2, gravity: 0.5, life: 1.6, size: 0.08, spread: 1.4, drag: 0.6 });
+      this.burst(at.clone().add(new THREE.Vector3(0, -1.0 + i * 0.25, 0)), { color: 0xffd23a, count: 28, speed: 0.9, lift: 1.6, gravity: 0.4, life: 1.5, size: 0.035, spread: 2.2, drag: 0.6 });
     }
   }
 

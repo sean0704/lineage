@@ -51,74 +51,123 @@ function shade(base: number, delta: number): string {
   return `rgb(${v},${v},${v})`;
 }
 
-/** 交錯砌法石磚牆 */
+/** 交錯砌法石磚牆（1024 高解析度：崩角磚緣、灰縫深度、石面紋理） */
 export function stoneWall(): SurfaceTextures {
   return memo('stoneWall', () => {
-    const size = 512;
+    const size = 1024;
     const rng = createRng(11);
     const [cc, c] = canvas(size);
     const [bc, b] = canvas(size);
     const rows = 6;
     const rowH = size / rows;
-    c.fillStyle = '#2a2826';
+    // 灰縫：深色、略帶砂粒
+    c.fillStyle = '#1e1c1a';
     c.fillRect(0, 0, size, size);
-    b.fillStyle = '#202020';
+    b.fillStyle = '#101010';
     b.fillRect(0, 0, size, size);
+    speckle(c, size, rng, 30000, 0.25);
 
     for (let r = 0; r < rows; r++) {
       const bricks = 3;
       const bw = size / bricks;
       const offset = (r % 2) * (bw / 2);
       for (let i = -1; i <= bricks; i++) {
-        const x = i * bw + offset + rng.range(-6, 6);
-        const y = r * rowH;
-        const w = bw - 6 + rng.range(-4, 4);
-        const h = rowH - 6;
-        const tone = rng.range(92, 140);
-        const grad = c.createLinearGradient(x, y, x, y + h);
-        grad.addColorStop(0, shade(tone, 18));
-        grad.addColorStop(1, shade(tone, -22));
+        const x = i * bw + offset + rng.range(-8, 8);
+        const y = r * rowH + rng.range(-3, 3);
+        const w = bw - 14 + rng.range(-6, 6);
+        const h = rowH - 14 + rng.range(-4, 4);
+        // 不規則崩角輪廓
+        const pts: [number, number][] = [];
+        const jag = () => rng.range(-5, 5);
+        const steps = 7;
+        for (let k = 0; k <= steps; k++) pts.push([x + 7 + (w * k) / steps + jag() * 0.4, y + 7 + jag()]);
+        for (let k = 1; k <= 3; k++) pts.push([x + 7 + w + jag(), y + 7 + (h * k) / 3]);
+        for (let k = steps - 1; k >= 0; k--) pts.push([x + 7 + (w * k) / steps + jag() * 0.4, y + 7 + h + jag()]);
+        for (let k = 2; k >= 1; k--) pts.push([x + 7 + jag(), y + 7 + (h * k) / 3]);
+        const path = new Path2D();
+        path.moveTo(pts[0][0], pts[0][1]);
+        for (const [px, py] of pts.slice(1)) path.lineTo(px, py);
+        path.closePath();
+
+        const tone = rng.range(96, 142);
+        const warm = rng.range(-6, 8);
+        const grad = c.createLinearGradient(x, y, x + w * 0.3, y + h);
+        grad.addColorStop(0, `rgb(${tone + 22 + warm},${tone + 18},${tone + 14 - warm})`);
+        grad.addColorStop(1, `rgb(${tone - 26 + warm},${tone - 28},${tone - 30 - warm})`);
         c.fillStyle = grad;
-        roundRect(c, x + 3, y + 3, w, h, 6);
-        c.fill();
-        // 高度圖：磚面凸起、邊緣圓滑
-        const bg = b.createLinearGradient(x, y, x, y + h);
-        bg.addColorStop(0, shade(200, rng.range(-20, 10)));
-        bg.addColorStop(1, shade(160, rng.range(-20, 10)));
+        c.fill(path);
+        // 高度：中央隆起、邊緣下凹
+        const bg = b.createRadialGradient(x + w / 2, y + h / 2, h * 0.2, x + w / 2, y + h / 2, w * 0.62);
+        bg.addColorStop(0, shade(215, rng.range(-12, 10)));
+        bg.addColorStop(1, shade(150, rng.range(-15, 10)));
         b.fillStyle = bg;
-        roundRect(b, x + 4, y + 4, w - 2, h - 2, 8);
-        b.fill();
+        b.fill(path);
+
+        c.save();
+        c.clip(path);
+        b.save();
+        b.clip(path);
+        // 石面紋理：細小坑洞與礦物斑點
+        for (let k = 0; k < 140; k++) {
+          const px = x + rng.range(0, w + 14);
+          const py = y + rng.range(0, h + 14);
+          const pr = rng.range(1, 4.5);
+          c.fillStyle = `rgba(${rng.chance(0.5) ? '20,18,16' : '210,200,185'},${rng.range(0.05, 0.22)})`;
+          c.beginPath();
+          c.arc(px, py, pr, 0, Math.PI * 2);
+          c.fill();
+          b.fillStyle = `rgba(${rng.chance(0.6) ? '40,40,40' : '255,255,255'},${rng.range(0.1, 0.35)})`;
+          b.beginPath();
+          b.arc(px, py, pr, 0, Math.PI * 2);
+          b.fill();
+        }
+        // 上緣受光的亮邊與下緣陰影
+        c.strokeStyle = 'rgba(255,240,220,0.12)';
+        c.lineWidth = 4;
+        c.beginPath();
+        c.moveTo(x + 10, y + 10);
+        c.lineTo(x + w, y + 10);
+        c.stroke();
+        c.strokeStyle = 'rgba(0,0,0,0.3)';
+        c.lineWidth = 6;
+        c.beginPath();
+        c.moveTo(x + 10, y + h + 4);
+        c.lineTo(x + w + 4, y + h + 4);
+        c.stroke();
         // 裂紋
-        if (rng.chance(0.35)) {
-          c.strokeStyle = 'rgba(20,18,16,0.6)';
-          b.strokeStyle = 'rgba(40,40,40,0.9)';
-          c.lineWidth = b.lineWidth = 1.5;
-          let cx = x + rng.range(10, w - 10);
-          let cy = y + 6;
+        if (rng.chance(0.4)) {
+          c.strokeStyle = 'rgba(14,12,10,0.75)';
+          b.strokeStyle = 'rgba(20,20,20,1)';
+          c.lineWidth = b.lineWidth = rng.range(1.5, 2.6);
+          let cx2 = x + rng.range(20, w - 20);
+          let cy2 = y + 8;
           c.beginPath();
           b.beginPath();
-          c.moveTo(cx, cy);
-          b.moveTo(cx, cy);
-          for (let k = 0; k < 4; k++) {
-            cx += rng.range(-12, 12);
-            cy += h / 5;
-            c.lineTo(cx, cy);
-            b.lineTo(cx, cy);
+          c.moveTo(cx2, cy2);
+          b.moveTo(cx2, cy2);
+          for (let k = 0; k < 6; k++) {
+            cx2 += rng.range(-16, 16);
+            cy2 += h / 6;
+            c.lineTo(cx2, cy2);
+            b.lineTo(cx2, cy2);
           }
           c.stroke();
           b.stroke();
         }
-        // 苔痕/污漬
-        if (rng.chance(0.3)) {
-          c.fillStyle = `rgba(40,50,30,${rng.range(0.1, 0.25)})`;
-          c.beginPath();
-          c.ellipse(x + rng.range(0, w), y + h, rng.range(10, 30), rng.range(4, 12), 0, 0, Math.PI * 2);
-          c.fill();
+        // 苔痕、水漬
+        if (rng.chance(0.35)) {
+          const g = c.createRadialGradient(x + rng.range(0, w), y + h, 0, x + rng.range(0, w), y + h, rng.range(30, 80));
+          g.addColorStop(0, `rgba(40,52,30,${rng.range(0.2, 0.4)})`);
+          g.addColorStop(1, 'rgba(40,52,30,0)');
+          c.fillStyle = g;
+          c.fillRect(x, y, w + 14, h + 14);
         }
+        c.restore();
+        b.restore();
       }
     }
-    speckle(c, size, rng, 9000, 0.12);
-    speckle(b, size, rng, 6000, 0.2);
+    speckle(c, size, rng, 26000, 0.1);
+    speckle(b, size, rng, 16000, 0.18);
     return { map: toTexture(cc, true), bump: toTexture(bc, false) };
   });
 }
@@ -330,15 +379,6 @@ export function slashArc(): THREE.CanvasTexture {
   });
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
 
 export type DecalKind = 'grime' | 'moss' | 'lava' | 'rune';
 

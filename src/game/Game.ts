@@ -90,6 +90,7 @@ export class Game implements PanelHost {
     this.renderer.onFrame((dt, t) => {
       this.effects.update(dt);
       this.hero.update(dt);
+      this.watchPerformance(dt);
       if (this.handLight.visible) this.handLight.intensity = 7 + Math.sin(t * 2.7) * 0.35 + Math.sin(t * 4.3) * 0.25;
     });
     this.bindInput();
@@ -185,6 +186,7 @@ export class Game implements PanelHost {
   showTitle(): void {
     this.mode = 'title';
     this.renderer.setView(new VillageView(this.effects));
+    this.perfGrace = 4;
     this.placeVillageCamera();
     this.startTitleOrbit();
     this.hero.group.visible = false;
@@ -297,6 +299,7 @@ export class Game implements PanelHost {
     this.pos = null;
     this.player.buffs = { haste: 0, brave: 0 };
     this.renderer.setView(new VillageView(this.effects));
+    this.perfGrace = 4;
     this.placeVillageCamera();
     this.hero.group.visible = false;
     this.handLight.visible = false;
@@ -341,6 +344,7 @@ export class Game implements PanelHost {
     const theme = getFloor(floor).theme;
     this.dview = new DungeonView(d, theme, this.renderer.camera);
     this.renderer.setView(this.dview);
+    this.perfGrace = 4;
     this.renderer.camera.rotation.set(0, 0, 0);
     this.placeCamera(pos.x, pos.y, pos.facing);
     this.hero.group.visible = true;
@@ -1211,7 +1215,38 @@ export class Game implements PanelHost {
     });
   }
 
+  private perfWindow = 0;
+  private perfFrames = 0;
+  private perfGrace = 4;
+
+  /**
+   * 自動調降畫質：連續約 3 秒平均低於 28 FPS 時降一級（高 → 中 → 低）。
+   * 切換場景或剛調整畫質後有數秒緩衝，避免把載入卡頓誤判為效能不足。
+   */
+  private watchPerformance(dt: number): void {
+    if (this.perfGrace > 0) {
+      this.perfGrace -= dt;
+      return;
+    }
+    if (document.hidden) return;
+    this.perfWindow += dt;
+    this.perfFrames++;
+    if (this.perfWindow < 3) return;
+    const fps = this.perfFrames / this.perfWindow;
+    this.perfWindow = 0;
+    this.perfFrames = 0;
+    const q = this.settings.quality;
+    if (fps >= 28 || q === 'low') return;
+    const next: Quality = q === 'high' ? 'medium' : 'low';
+    this.settings.quality = next;
+    saveSettings(this.settings);
+    this.renderer.post.setQuality(next);
+    this.perfGrace = 5;
+    this.say(`偵測到畫面不夠流暢，已自動將畫質調為「${next === 'medium' ? '中' : '低'}」。可在選單中手動調整。`, 'sys');
+  }
+
   private setQuality(q: Quality, rerender: () => void): void {
+    this.perfGrace = 5;
     this.settings.quality = q;
     saveSettings(this.settings);
     this.renderer.post.setQuality(q);

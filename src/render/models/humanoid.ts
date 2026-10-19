@@ -369,6 +369,29 @@ function buildHead(style: HeadStyle, head: THREE.Group, kit: Kit, m: HeadMats): 
       }
       return null;
     }
+    case 'human': {
+      const face = kit.mesh(new THREE.IcosahedronGeometry(0.12, 1), m.skin);
+      face.scale.set(0.9, 1.08, 0.95);
+      head.add(face);
+      const hair = kit.mesh(new THREE.SphereGeometry(0.128, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), kit.mat(0x3a2414, { rough: 1 }));
+      hair.position.set(0, 0.02, -0.012);
+      hair.rotation.x = -0.25;
+      head.add(hair);
+      const nose = kit.mesh(new THREE.ConeGeometry(0.022, 0.06, 4), m.skin);
+      nose.position.set(0, -0.005, 0.12);
+      nose.rotation.x = Math.PI / 2.2;
+      head.add(nose);
+      for (const side of [-1, 1]) {
+        const e = kit.mesh(new THREE.IcosahedronGeometry(0.014, 0), kit.mat(0x1a1410));
+        e.position.set(side * 0.04, 0.025, 0.105);
+        head.add(e);
+      }
+      const beard = kit.mesh(new THREE.ConeGeometry(0.07, 0.14, 6), kit.mat(0x4a3424, { rough: 1 }));
+      beard.position.set(0, -0.1, 0.06);
+      beard.rotation.x = Math.PI + 0.3;
+      head.add(beard);
+      return null;
+    }
     case 'hood': {
       const hoodMat = kit.mat(0x14141c, { rough: 1 });
       const hood = kit.mesh(new THREE.ConeGeometry(0.2, 0.42, 7, 1, true), hoodMat);

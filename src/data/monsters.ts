@@ -1,8 +1,8 @@
 import type { Rarity } from './items';
 
 /** 程序化 3D 模型規格（純資料，由 render/models 解讀） */
-export type HeadStyle = 'goblin' | 'skull' | 'zombie' | 'orc' | 'helm' | 'hood' | 'horned' | 'ghoul';
-export type WeaponStyle = 'club' | 'bow' | 'axe' | 'spear' | 'sword' | 'staff' | 'flameSword' | 'claws' | 'scythe';
+export type HeadStyle = 'goblin' | 'skull' | 'zombie' | 'orc' | 'helm' | 'hood' | 'horned' | 'ghoul' | 'human';
+export type WeaponStyle = 'club' | 'bow' | 'axe' | 'spear' | 'sword' | 'staff' | 'flameSword' | 'claws' | 'scythe' | 'none';
 
 export type ModelSpec =
   | {

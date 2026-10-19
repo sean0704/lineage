@@ -46,6 +46,8 @@ export function buildWeapon(style: HeroWeaponStyle, kit: Kit, accent?: number): 
   };
 
   switch (style) {
+    case 'none':
+      return g;
     case 'sword':
     case 'bigSword': {
       const big = style === 'bigSword';

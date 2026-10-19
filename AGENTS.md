@@ -9,8 +9,8 @@
 向經典 MMORPG《天堂》致敬的**第一人稱格子地監 RPG**。玩家扮演騎士，從奇岩村出發，探索程序生成的古魯丁地監 1F–7F，擊敗 3F、5F 首領與 7F 死亡騎士。
 
 - **技術**：Vite + TypeScript（strict）+ Three.js（npm）+ Vitest，純前端、無後端。
-- **美術**：所有 3D 模型、材質、特效都在程式內程序化產生，**沒有任何圖片或音檔資產**。
-- **音效**：Web Audio API 即時合成。
+- **美術**：所有 3D 模型、材質、特效、UI 圖示都在程式內程序化產生，**沒有任何圖片或音檔資產**。畫面經過後製管線（MSAA、泛光、色調映射、色彩分級）。
+- **音效與配樂**：Web Audio API 即時合成（含依場景切換的程序化背景音樂）。
 - **存檔**：`localStorage`（版本化、具正規化與容錯）。
 
 ---
@@ -29,6 +29,7 @@ npm run preview      # 預覽 build 結果
 開發模式專用工具：
 - `window.__debug`（僅 `npm run dev`）：`floor(n)` 跳層、`xp(n)` 加經驗、`god()`、`gold(n)`、`give(key, qty)`、`heal()`、`revealMap()`、`seek('monster'|'boss'|'chest'|'down')` 自動走一步、`state()`。
 - `/dev/gallery.html`：一次展示所有程序化怪物與寶箱模型（`?only=goblin,deathKnight` 篩選）。
+- `__debug.audio`：音效引擎實例（可量測輸出音量）。
 
 > 注意：使用 ES modules 與打包，**不能直接雙擊 index.html 開啟**；請用 `npm run dev` 或部署 `dist/`。
 
@@ -59,17 +60,22 @@ src/systems/
   inventory.ts             背包、裝備、消耗品、衝裝、買賣
   loot.ts                  寶箱與首領獎勵
 src/render/
-  Renderer.ts              Scene/Camera rig/主迴圈/鏡頭震動/投影
-  Tween.ts                 集中式 delta-time 補間（回傳 Promise）
-  textures.ts              Canvas 程序化材質（石磚、石板、岩石、草地、光暈、火焰、刀光）
-  DungeonView.ts           InstancedMesh 牆地天花板、樓梯、火把光源池、裝飾
-  VillageView.ts           奇岩村夜景（營火、房舍、攤位、星空）
+  Renderer.ts              Scene/Camera rig/主迴圈/鏡頭震動/命中停頓/投影/環境反射
+  PostFX.ts                後製管線：MSAA → 泛光 → OutputPass → 色彩分級（受擊色差、紅邊、畫面脈衝）；高/中/低畫質
+  materialFx.ts            共用材質強化（onBeforeCompile）：輪廓邊光、地面遮蔽、世界座標斑駁
+  Tween.ts                 集中式 delta-time 補間（回傳 Promise，支援 timeScale）
+  textures.ts              Canvas 程序化材質（石磚、濕石板＋粗糙度、岩石、草地、光暈、火焰、刀光、貼花、蛛網、旗幟）
+  DungeonView.ts           InstancedMesh 牆地天花板、樓梯、火把、光源池、主題粒子
+  decor.ts                 地監建築與物件：拱門、石柱、飛簷、石肋、橫樑、木桶木箱陶罐骨堆蠟燭火盆鎖鏈蛛網旗幟、主題物件與地面貼花（靜態物件依材質合併）
+  VillageView.ts           奇岩村夜景（石板廣場、半木構房屋、地監石門、攤位、水井、燈柱、村民 NPC、遠山、螢火蟲）
   MonsterView.ts           怪物動畫：待機/移動/攻擊/受擊/蓄力/死亡
   HeroView.ts              第一人稱武器與盾牌
   effects.ts               粒子爆發、刀光、投射物
   models/                  kit（材質/幾何工具）、humanoid、beasts、weapons、chest
-src/audio/Audio.ts         Web Audio 合成音效與環境音
-src/ui/                    dom 建構器、Hud、Log、Minimap、Fx（浮字/閃光/橫幅）、Modal、panels
+src/audio/Audio.ts         Web Audio 合成音效、環境音、音量偏好
+src/audio/Music.ts         程序化背景音樂（村莊/地監/戰鬥/首領），前瞻排程＋回授延遲
+src/ui/                    dom 建構器、Hud、Log、Minimap、Fx（浮字/橫幅/淡入淡出）、Modal、panels、icons（自繪 SVG 道具圖示）
+src/game/settings.ts       顯示設定（畫質）存取
 src/game/Game.ts           狀態機（title/village/dungeon/combat/dead）、輸入、戰鬥演出、存檔時機
 tests/                     Vitest：combat、dungeonGen、inventory、progression、save、balance（+ sim.ts 機器人）
 dev/gallery.*              開發用模型展示頁（不進正式建置）
@@ -96,6 +102,13 @@ dev/gallery.*              開發用模型展示頁（不進正式建置）
 8. **音效防護**：`audio` 的所有方法在 AudioContext 不可用時必須安靜失敗；AudioContext 只在使用者手勢後建立（`audio.unlock()`）。
 9. **存檔相容**：變更 `PlayerState` 結構時，同步更新 `core/save.ts` 的 `normalizePlayer()`（缺欄位要給預設值），必要時提升 `SAVE_VERSION` 並寫遷移。
 10. **焦點與鍵盤**：滑鼠點擊按鈕後會自動失焦；全域快捷鍵在焦點位於按鈕時不處理 Enter/Space，避免重複觸發。
+11. **美術一致性**：
+    - 新材質一律經過 `enhanceMaterial()`（或使用 `Kit.mat()`，已自動套用），才會有邊光、地面遮蔽與斑駁，否則會與周圍格格不入。
+    - 自發光強度要保守（`Kit.glowMat` 會自動減半）：泛光門檻約 0.96，太強的 emissive 會變成刺眼的光球。
+    - 新場景（View）要提供 `grade`（色彩分級）與 `environment`（環境反射強度）；地監主題色在 `data/floors.ts` 的 `shadowTint/highlightTint`。
+    - 大量靜態物件請用 `decor.ts` 的 `StaticBatch` 合併，避免繪製呼叫暴增（目前每層約 30–80 次）。
+    - UI 圖示用 `ui/icons.ts`，不要使用 emoji（各平台外觀不一致）。
+12. **畫面閃光**：戰鬥與道具的畫面回饋用 `renderer.post.pulse()/hurt()/impact()`，不要再加 DOM 遮罩閃光。
 
 ---
 

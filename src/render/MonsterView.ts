@@ -53,6 +53,22 @@ export class MonsterView {
     this.walk = 0;
   }
 
+  /** 首領登場：從地面升起並放大 */
+  async intro(tweens: Tweens): Promise<void> {
+    const body = this.rig.body;
+    const baseY = body.position.y;
+    const root = this.rig.root;
+    const baseScale = root.scale.x;
+    await tweens.to(900, (k) => {
+      body.position.y = baseY - (1 - k) * 1.6;
+      root.scale.setScalar(baseScale * (0.75 + 0.25 * k));
+      this.windup = Math.sin(k * Math.PI) * 0.6;
+    }, { easing: ease.outBack });
+    body.position.y = baseY;
+    root.scale.setScalar(baseScale);
+    this.windup = 0;
+  }
+
   setCharging(on: boolean): void {
     this.charging = on;
     if (!on) this.restoreEmissive();

@@ -88,6 +88,19 @@ export function drawMinimap(canvas: HTMLCanvasElement, d: DungeonFloor | null, p
     ctx.fill();
   }
 
+  // 指北標示（地圖固定北方朝上）
+  ctx.save();
+  ctx.font = `bold ${11 * dpr}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, 11 * dpr, 9 * dpr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#d8c08a';
+  ctx.fillText('北', canvas.width / 2, 5 * dpr);
+  ctx.restore();
+
   // 玩家箭頭
   const px = sx(pos.x) + cell / 2;
   const py = sy(pos.y) + cell / 2;

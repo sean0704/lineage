@@ -74,7 +74,8 @@ src/render/
   models/                  kit（材質/幾何工具）、humanoid、beasts、weapons、chest
 src/audio/Audio.ts         Web Audio 合成音效、環境音、音量偏好
 src/audio/Music.ts         程序化背景音樂（村莊/地監/戰鬥/首領），前瞻排程＋回授延遲
-src/ui/                    dom 建構器、Hud、Log、Minimap、Fx（浮字/橫幅/淡入淡出）、Modal、panels、icons（自繪 SVG 道具圖示）
+src/ui/                    dom 建構器、Hud、Log、Minimap、Fx（浮字/橫幅/淡入淡出）、Modal、panels、icons（自繪 SVG 道具圖示）、
+                           Toasts（戰利品卡片）、Tips（一次性新手提示，紀錄存在 localStorage `lineage3d.tips`）
 src/game/settings.ts       顯示設定（畫質）存取
 src/game/Game.ts           狀態機（title/village/dungeon/combat/dead）、輸入、戰鬥演出、存檔時機
 tests/                     Vitest：combat、dungeonGen、inventory、progression、save、balance（+ sim.ts 機器人）

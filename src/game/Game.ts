@@ -24,6 +24,8 @@ import { ease, lerpAngle } from '../render/Tween';
 import { VillageView } from '../render/VillageView';
 import { $, btn, h } from '../ui/dom';
 import { Fx } from '../ui/Fx';
+import { Toasts } from '../ui/Toasts';
+import { Tips } from '../ui/Tips';
 import { Hud, QUICK_ITEMS } from '../ui/Hud';
 import { Log, type LogTone } from '../ui/Log';
 import { drawMinimap } from '../ui/Minimap';
@@ -49,6 +51,9 @@ export class Game implements PanelHost {
   private readonly hud: Hud;
   private readonly log = new Log();
   private readonly fx = new Fx();
+  private readonly toasts = new Toasts();
+  private readonly tips = new Tips();
+  private stepsThisFloor = 0;
   private readonly storage: StorageLike | null = defaultStorage();
   private readonly minimap = $('minimap') as HTMLCanvasElement;
   private readonly actionsEl = $('actions');
@@ -302,6 +307,7 @@ export class Game implements PanelHost {
     this.refresh();
     this.save();
     if (withFade) await this.fx.fadeIn();
+    this.tips.show('village');
   }
 
   private placeVillageCamera(): void {
@@ -349,6 +355,10 @@ export class Game implements PanelHost {
     this.save();
     await this.fx.fadeIn();
     this.fx.showBanner(`地下 ${floor} 層`, theme.name);
+    this.stepsThisFloor = 0;
+    this.tips.dismiss('village');
+    this.tips.show('move');
+    if (d.bossKey) window.setTimeout(() => this.tips.show('boss'), 2500);
     if (d.bossKey) {
       const boss = getMonster(d.bossKey);
       window.setTimeout(() => {
@@ -534,6 +544,7 @@ export class Game implements PanelHost {
 
     if (moved) {
       this.player.stats.steps++;
+      if (++this.stepsThisFloor >= 4) this.tips.dismiss('move');
       audio.footstep();
       const anims: Promise<void>[] = [this.moveCamera(pos.x, pos.y)];
       for (const m of d.monsters) {
@@ -612,7 +623,7 @@ export class Game implements PanelHost {
     const loot = rollChest(chest.tier, d.floor, this.rng);
     this.say(`你打開了${CHEST_NAMES[chest.tier]}！`, 'loot');
     this.grantLoot(loot);
-    this.fx.showBanner(CHEST_NAMES[chest.tier], this.lootSummary(loot), '', 2200);
+    this.fx.showBanner(CHEST_NAMES[chest.tier], '', '', 1600);
     this.drawMap();
     this.refresh();
     this.scheduleSave();
@@ -622,14 +633,16 @@ export class Game implements PanelHost {
     this.player.gold += loot.gold;
     audio.coin();
     this.say(`獲得 ${loot.gold} 金幣。`, 'loot');
+    this.toasts.gold(loot.gold);
     for (const it of loot.items) {
       addItem(this.player, it.key, it.qty);
-      this.say(`獲得 ${getItem(it.key).name}${it.qty > 1 ? ` ×${it.qty}` : ''}！`, getItem(it.key).rarity === 'legendary' ? 'level' : 'loot');
+      const def = getItem(it.key);
+      this.say(`獲得 ${def.name}${it.qty > 1 ? ` ×${it.qty}` : ''}！`, def.rarity === 'legendary' ? 'level' : 'loot');
+      this.toasts.item(it.key, it.qty);
+      if (def.kind === 'equip') this.tips.show('loot');
+      if (def.kind === 'consumable' && def.effect.type === 'enchant') this.tips.show('enchant');
+      if (def.rarity === 'legendary') audio.levelUp();
     }
-  }
-
-  private lootSummary(loot: ChestLoot): string {
-    return [`${loot.gold} 金幣`, ...loot.items.map((it) => `${getItem(it.key).name}${it.qty > 1 ? ` ×${it.qty}` : ''}`)].join('・');
   }
 
   // ═════════════════════ 戰鬥 ═════════════════════
@@ -652,7 +665,15 @@ export class Game implements PanelHost {
     audio.setMusic(monster.boss ? 'boss' : 'combat', root);
     if (monster.boss) {
       audio.bossAlert();
-      this.renderer.shake(0.08, 900);
+      const view = this.combat.view;
+      if (view) {
+        this.effects.burst(view.root.position.clone().add(new THREE.Vector3(0, 0.2, 0)), { color: 0x8a7a6a, count: 60, speed: 2.2, lift: 0.8, gravity: -1.2, life: 1.4, size: 0.09, spread: 1.2 });
+        const aura = (monster.def.model as { aura?: number }).aura ?? 0xff3a1a;
+        this.effects.burst(view.center(), { color: aura, count: 50, speed: 2.6, gravity: 0, life: 1.1, spread: 0.6 });
+        this.renderer.post.impact(1.4);
+        void view.intro(this.renderer.tweens);
+      }
+      this.renderer.shake(0.1, 1100);
       this.fx.showBanner(monster.name, `Lv.${monster.level}・${monster.def.flavor}`, 'boss', 3000);
       this.say(`⚠ ${monster.name}（Lv.${monster.level}）擋住了你的去路！`, 'boss');
     } else {
@@ -661,12 +682,16 @@ export class Game implements PanelHost {
     this.drawMap();
     this.refresh();
     this.renderActions();
+    this.tips.dismiss('move');
+    this.tips.show('combat');
   }
 
   private combatAction(action: PlayerAction): void {
     if (this.mode !== 'combat' || !this.combat) return;
     this.run(async () => {
       const c = this.combat!;
+      this.tips.dismiss('combat');
+      this.tips.dismiss('charge');
       const res = resolveTurn(this.player, c.cs, action, this.rng);
       if (!res.turnUsed) {
         audio.error();
@@ -772,6 +797,7 @@ export class Game implements PanelHost {
           this.refresh();
           break;
         case 'monsterCharge':
+          this.tips.show('charge');
           audio.charge();
           view?.setCharging(true);
           this.fx.showBanner('⚠ 危險', ev.text.replace(/^⚠\s*/, ''), 'warn', 2400);
@@ -927,10 +953,13 @@ export class Game implements PanelHost {
       this.player.stats.kills++;
       this.say(`獲得 ${rw.xp} 經驗值與 ${rw.gold} 金幣。`, 'loot');
       audio.coin();
+      this.toasts.gold(rw.gold, rw.xp);
       for (const drop of rw.drops) {
         addItem(this.player, drop);
         const def = getItem(drop);
         this.say(`${m.name}掉落了 ${def.name}！`, def.rarity === 'legendary' || def.rarity === 'rare' ? 'level' : 'loot');
+        this.toasts.item(drop);
+        if (def.kind === 'equip') this.tips.show('loot');
       }
       if (m.boss) {
         this.player.stats.bossKills++;
@@ -1164,6 +1193,11 @@ export class Game implements PanelHost {
       body,
       actions: [
         btn('操作說明', () => this.modal.open({ title: '操作說明', body: helpBody(), wide: true }), { variant: 'ghost' }),
+        btn('重新顯示提示', () => {
+          this.tips.reset();
+          audio.click();
+          this.say('新手提示已重設，會在對應情境再次出現。', 'sys');
+        }, { variant: 'ghost' }),
         btn('儲存並回到標題', () => {
           this.save();
           this.modal.close(true);
@@ -1191,6 +1225,7 @@ export class Game implements PanelHost {
   }
 
   private refresh(): void {
+    if (this.mode === 'combat' && this.player.hp > 0 && this.player.hp < getStats(this.player).maxHp * 0.35) this.tips.show('lowhp');
     const canUse = !this.busy && (this.mode === 'dungeon' || this.mode === 'village' || this.mode === 'combat');
     this.hud.update(this.player, this.combat?.cs ?? null, canUse);
   }
@@ -1227,7 +1262,8 @@ export class Game implements PanelHost {
       }
       el.append(btn('攻擊', () => this.combatAction({ type: 'attack' }), { variant: 'danger', key: 'Space' }));
       knownSkills(this.player).forEach((s, i) => {
-        el.append(btn(s.name, () => this.combatAction({ type: 'skill', id: s.id }), { key: SKILL_KEYS[i].toUpperCase(), disabled: this.player.mp < s.mp, small: `MP${s.mp}`, title: s.desc }));
+        const label = h('span', {}, h('span', { class: 'lbl-full', text: s.name }), h('span', { class: 'lbl-short', text: s.short }));
+        el.append(btn(label, () => this.combatAction({ type: 'skill', id: s.id }), { key: SKILL_KEYS[i].toUpperCase(), disabled: this.player.mp < s.mp, small: `MP${s.mp}`, title: `${s.name}：${s.desc}` }));
       });
       el.append(btn('防禦', () => this.combatAction({ type: 'defend' }), { variant: 'neutral', key: 'F' }));
       el.append(btn('道具', () => openInventory(this, 'items'), { variant: 'success', key: 'I' }));

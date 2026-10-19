@@ -846,7 +846,7 @@ export class Game implements PanelHost {
               if (style !== 'melee') {
                 void this.effects.projectile(view.center(), this.cameraPoint(0.5), style === 'ranged' ? 0xe8e0c0 : monsterColor, style === 'ranged' ? 0.25 : 0.6).then(impact);
               } else void impact();
-            });
+            }, ev.kind === 'monsterHit' && ev.heavy);
             if (!fired) await impact();
             if (style !== 'melee') await tw.wait(280);
           } else await impact();
@@ -888,6 +888,7 @@ export class Game implements PanelHost {
           await tw.wait(500);
           break;
         case 'enrage':
+          if (view) void view.roar(tw);
           audio.bossAlert();
           this.renderer.shake(0.1, 600);
           if (view) this.effects.burst(view.center(), { color: 0xff3a1a, count: 60, speed: 3, life: 0.9 });

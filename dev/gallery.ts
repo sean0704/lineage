@@ -7,6 +7,7 @@ import { MONSTERS } from '../src/data/monsters';
 import { buildChest } from '../src/render/models/chest';
 import { MonsterView } from '../src/render/MonsterView';
 import type { ChestTier } from '../src/systems/dungeonGen';
+import { Tweens } from '../src/render/Tween';
 
 const only = new URLSearchParams(location.search).get('only')?.split(',');
 const keys = Object.keys(MONSTERS).filter((k) => !only || only.includes(k));
@@ -61,7 +62,14 @@ const depth = rows * spacing * 1.3;
 camera.position.set(0, depth * 0.55 + 2, depth * 0.75 + 6);
 camera.lookAt(0, 0.8, -depth * 0.25);
 const clock = new THREE.Clock();
+const tweens = new Tweens();
+// 開發用：在主控台呼叫 __gallery.views[0].attack(__gallery.tweens, 'melee', () => {}, true) 等方法預覽動作
+(window as unknown as { __gallery: unknown }).__gallery = { views, tweens };
+let last = performance.now();
 renderer.setAnimationLoop(() => {
+  const now = performance.now();
+  tweens.update(now - last);
+  last = now;
   const t = clock.getElapsedTime();
   views.forEach((v) => v.update(0.016, t, camera.position));
   renderer.render(scene, camera);

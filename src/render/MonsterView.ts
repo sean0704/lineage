@@ -21,6 +21,11 @@ export class MonsterView {
   private dying = false;
   private flash = 0;
   private tinted = false;
+  private heavy = false;
+  private roaring = 0;
+  /** 待機小動作（張望、晃動武器）的計時 */
+  private fidgetAt = 3 + Math.random() * 5;
+  private fidget = 0;
   private yaw = 0;
   private readonly baseEmissive: { m: THREE.MeshStandardMaterial; color: THREE.Color; intensity: number }[];
   private readonly baseLight: number;
@@ -74,18 +79,30 @@ export class MonsterView {
     if (!on) this.restoreEmissive();
   }
 
-  async attack(tweens: Tweens, style: AttackStyle, onImpact: () => void): Promise<void> {
+  /** heavy：蓄力大招，蓄勢更久、衝得更遠 */
+  async attack(tweens: Tweens, style: AttackStyle, onImpact: () => void, heavy = false): Promise<void> {
     this.setCharging(false);
-    const reach = style === 'melee' ? 0.85 : 0.1;
-    await tweens.to(style === 'melee' ? 240 : 300, (k) => (this.windup = k), { easing: ease.outQuad });
-    await tweens.to(110, (k) => {
+    this.heavy = heavy;
+    const kind = this.rig.kind;
+    // 野獸類以撲擊為主，前衝距離較長
+    const beast = kind === 'spider' || kind === 'hound';
+    const reach = style === 'melee' ? (beast ? 1.05 : 0.85) * (heavy ? 1.25 : 1) : 0.1;
+    const windupMs = (style === 'melee' ? (kind === 'golem' ? 360 : beast ? 200 : 240) : 300) * (heavy ? 1.5 : 1);
+    await tweens.to(windupMs, (k) => (this.windup = k), { easing: ease.outQuad });
+    await tweens.to(heavy ? 90 : 110, (k) => {
       this.windup = 1 - k;
       this.lunge = k * reach;
     }, { easing: ease.inQuad });
     onImpact();
-    await tweens.to(320, (k) => (this.lunge = (1 - k) * reach), { easing: ease.outCubic });
+    await tweens.to(heavy ? 420 : 320, (k) => (this.lunge = (1 - k) * reach), { easing: ease.outCubic });
     this.windup = 0;
     this.lunge = 0;
+    this.heavy = false;
+  }
+
+  /** 狂暴咆哮：後仰、張嘴、雙臂張開 */
+  roar(tweens: Tweens): Promise<void> {
+    return tweens.to(900, (k) => (this.roaring = Math.sin(k * Math.PI)), { easing: ease.linear });
   }
 
   hit(tweens: Tweens, strong: boolean): Promise<void> {
@@ -112,14 +129,28 @@ export class MonsterView {
     const body = this.rig.body;
     const startY = body.position.y;
     const light = this.rig.light;
-    await tweens.to(750, (k) => {
-      if (this.rig.kind === 'humanoid' || this.rig.kind === 'golem') body.rotation.x = -k * 1.3;
-      else body.rotation.z = k * 0.6;
-      body.position.y = startY - k * (this.rig.kind === 'eye' ? 1.2 : 0.3);
+    const biped = this.rig.kind === 'humanoid' || this.rig.kind === 'golem';
+    const legs = [this.rig.parts.legL, this.rig.parts.legR];
+    if (biped) {
+      // 先跪倒（膝蓋彎曲、身體下沉）
+      await tweens.to(320, (k) => {
+        body.position.y = startY - k * 0.38;
+        body.rotation.x = k * 0.25;
+        legs.forEach((l) => l && (l.rotation.x = -k * 1.1));
+      }, { easing: ease.outQuad });
+    }
+    await tweens.to(biped ? 620 : 750, (k) => {
+      if (biped) {
+        body.rotation.x = 0.25 + k * 1.25;
+        body.position.y = startY - 0.38 - k * 0.2;
+      } else {
+        body.rotation.z = k * 0.6;
+        body.position.y = startY - k * (this.rig.kind === 'eye' ? 1.2 : 0.3);
+      }
       const opacity = 1 - ease.inQuad(k);
       mats.forEach((m) => ((m as THREE.MeshStandardMaterial).opacity = opacity));
       if (light) light.intensity = this.baseLight * (1 - k);
-    }, { easing: ease.outQuad });
+    }, { easing: biped ? ease.inQuad : ease.outQuad });
   }
 
   private restoreEmissive(): void {
@@ -143,14 +174,22 @@ export class MonsterView {
     // 衝刺位移（沿面向方向）
     r.body.position.z = this.lunge;
 
+    // 待機小動作
+    this.fidgetAt -= dt;
+    if (this.fidgetAt <= 0 && this.windup === 0) {
+      this.fidget = 1.6;
+      this.fidgetAt = 5 + Math.random() * 6;
+    }
+    if (this.fidget > 0) this.fidget = Math.max(0, this.fidget - dt);
+
     switch (r.kind) {
       case 'humanoid':
       case 'golem':
         this.animateBiped(time);
         break;
       case 'spider': {
-        r.body.position.y = 0.5 + Math.sin(time * 3) * 0.02 + this.windup * 0.25;
-        r.body.rotation.x = -this.windup * 0.4;
+        r.body.position.y = 0.5 + Math.sin(time * 3) * 0.02 + this.windup * 0.35 + this.roaring * 0.25;
+        r.body.rotation.x = -this.windup * 0.55 - this.roaring * 0.4;
         r.groups.legs?.forEach((leg) => {
           const ph = leg.userData.phase as number;
           leg.rotation.z = Math.sin(time * (this.walk ? 14 : 3) + ph) * (this.walk ? 0.2 : 0.05);
@@ -160,8 +199,9 @@ export class MonsterView {
         break;
       }
       case 'hound': {
-        r.body.position.y = Math.sin(time * 4) * 0.015 - this.windup * 0.12;
-        r.body.rotation.x = this.windup * 0.15;
+        // 伏低蓄勢，撲出時身體前傾
+        r.body.position.y = Math.sin(time * 4) * 0.015 - this.windup * 0.2 + Math.max(0, this.lunge) * 0.25;
+        r.body.rotation.x = this.windup * 0.22 - Math.max(0, this.lunge) * 0.25 - this.roaring * 0.3;
         r.groups.legs?.forEach((leg) => {
           const ph = leg.userData.phase as number;
           leg.rotation.x = Math.sin(time * (this.walk ? 14 : 0) + ph) * 0.4;
@@ -227,18 +267,25 @@ export class MonsterView {
     const p = this.rig.parts;
     const golem = this.rig.kind === 'golem';
     const breathe = Math.sin(time * (golem ? 1.2 : 2.2));
+    const lift = this.heavy ? 1.25 : 1;
+    const roar = this.roaring;
+    const fid = Math.sin((this.fidget / 1.6) * Math.PI);
     this.rig.body.position.y = breathe * 0.012;
-    if (p.spine) p.spine.rotation.x = (p.spine.userData.base ??= p.spine.rotation.x) + breathe * 0.025 - this.windup * 0.25 + this.lunge * 0.3;
+    if (p.spine) p.spine.rotation.x = (p.spine.userData.base ??= p.spine.rotation.x) + breathe * 0.025 - this.windup * 0.25 * lift + this.lunge * 0.3 - roar * 0.35;
     if (p.head) {
-      p.head.rotation.y = Math.sin(time * 0.7) * 0.25;
-      p.head.rotation.x = Math.sin(time * 1.1) * 0.05;
+      // 待機時偶爾轉頭張望
+      p.head.rotation.y = Math.sin(time * 0.7) * 0.2 + fid * Math.sin(this.fidgetAt * 3) * 0.6;
+      p.head.rotation.x = Math.sin(time * 1.1) * 0.05 - roar * 0.5;
     }
-    if (p.jaw) p.jaw.rotation.x = Math.max(0, Math.sin(time * 1.5)) * 0.15 + this.windup * 0.3;
-    // 右手揮擊：蓄力時高舉，出手時下劈
-    if (p.armR) p.armR.rotation.x = lerp(Math.sin(time * 1.6) * 0.06, -2.6, this.windup) + this.lunge * 2.2;
-    if (p.armL) p.armL.rotation.x = Math.sin(time * 1.6 + 1) * 0.06 - this.windup * 0.4;
-    if (p.armR) p.armR.rotation.z = -0.15;
-    if (p.armL) p.armL.rotation.z = 0.15;
+    if (p.jaw) p.jaw.rotation.x = Math.max(0, Math.sin(time * 1.5)) * 0.15 + this.windup * 0.3 + roar * 0.6;
+    // 右手揮擊：蓄力時高舉，出手時下劈；高崙雙臂齊舉砸地
+    const raise = -2.6 * lift;
+    if (p.armR) p.armR.rotation.x = lerp(Math.sin(time * 1.6) * 0.06 + fid * 0.35, raise, this.windup) + this.lunge * 2.2 - roar * 0.6;
+    if (p.armL) p.armL.rotation.x = golem
+      ? lerp(Math.sin(time * 1.6 + 1) * 0.06, raise, this.windup) + this.lunge * 2.2 - roar * 0.6
+      : Math.sin(time * 1.6 + 1) * 0.06 - this.windup * 0.4 - roar * 0.6;
+    if (p.armR) p.armR.rotation.z = -0.15 - roar * 0.7;
+    if (p.armL) p.armL.rotation.z = 0.15 + roar * 0.7;
     const stride = this.walk ? Math.sin(time * 12) * 0.5 : 0;
     if (p.legL) p.legL.rotation.x = stride;
     if (p.legR) p.legR.rotation.x = -stride;

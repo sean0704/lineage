@@ -194,7 +194,7 @@ export class MonsterView {
       for (const b of this.baseEmissive) {
         if (this.flash > 0) {
           b.m.emissive.setRGB(1, 0.85, 0.75);
-          b.m.emissiveIntensity = this.flash * 0.55;
+          b.m.emissiveIntensity = this.flash * 0.32;
         } else {
           b.m.emissive.setRGB(1, 0.15, 0.05);
           b.m.emissiveIntensity = b.intensity * 0.5 + pulse * 0.6;

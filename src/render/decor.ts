@@ -100,7 +100,10 @@ export function buildDecor(d: DungeonFloor, theme: FloorTheme): DecorResult {
   for (const c of d.chests) occupied.add(`${c.x},${c.y}`);
   occupied.add(`${d.up.x},${d.up.y}`);
   if (d.down) occupied.add(`${d.down.x},${d.down.y}`);
-  occupied.add(`${d.spawn.x},${d.spawn.y}`);
+  // 出生點與樓梯周圍保持淨空，避免物件貼著鏡頭
+  for (const p of [d.spawn, d.up, ...(d.down ? [d.down] : [])]) {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) occupied.add(`${p.x + dx},${p.y + dy}`);
+  }
 
   const addFlame = (pos: THREE.Vector3, size: number, color: number) => {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: flame(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -190,7 +193,7 @@ export function buildDecor(d: DungeonFloor, theme: FloorTheme): DecorResult {
 
   // 走廊石肋：每隔兩格一道
   const ribGeo = new THREE.BoxGeometry(CELL, 0.24, 0.32);
-  const ribPost = new THREE.BoxGeometry(0.18, WALL_H, 0.36);
+  const ribPost = new THREE.BoxGeometry(0.1, WALL_H, 0.3);
   for (let y = 1; y < n - 1; y++) {
     for (let x = 1; x < n - 1; x++) {
       if (tile(x, y) !== TILE.floor || roomAt(x, y)) continue;
@@ -200,7 +203,7 @@ export function buildDecor(d: DungeonFloor, theme: FloorTheme): DecorResult {
       const ry = ns ? 0 : Math.PI / 2;
       batch.add(ribGeo, mats.stoneDark, compose(x * CELL, WALL_H - 0.12, y * CELL, ry));
       for (const side of [-1, 1]) {
-        batch.add(ribPost, mats.stoneDark, compose(x * CELL + (ns ? side * 0.94 : 0), WALL_H / 2, y * CELL + (ew ? side * 0.94 : 0), ry));
+        batch.add(ribPost, mats.stoneDark, compose(x * CELL + (ns ? side * 0.98 : 0), WALL_H / 2, y * CELL + (ew ? side * 0.98 : 0), ry));
       }
     }
   }

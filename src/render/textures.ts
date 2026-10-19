@@ -315,14 +315,13 @@ export function slashArc(): THREE.CanvasTexture {
     const [cc, c] = canvas(size);
     const cx = size / 2;
     const cy = size / 2;
-    c.shadowColor = 'rgba(255,255,255,0.9)';
-    c.shadowBlur = 18;
-    for (let i = 0; i < 14; i++) {
-      const k = i / 14;
-      c.strokeStyle = `rgba(255,255,255,${1 - k * 0.7})`;
-      c.lineWidth = 22 * (1 - k) + 2;
+    // 中間最亮、向兩端漸細的弧形刀光
+    for (let i = 0; i < 10; i++) {
+      const k = i / 10;
+      c.strokeStyle = `rgba(255,255,255,${(1 - k) * 0.55})`;
+      c.lineWidth = 9 * (1 - k) + 1;
       c.beginPath();
-      c.arc(cx, cy, size * 0.38 - i * 1.4, Math.PI * 1.05, Math.PI * 1.95);
+      c.arc(cx, cy, size * 0.4 - i * 1.6, Math.PI * (1.12 + k * 0.08), Math.PI * (1.88 - k * 0.08));
       c.stroke();
     }
     const t = new THREE.CanvasTexture(cc);

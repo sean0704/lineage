@@ -67,8 +67,8 @@ export class Effects {
 
   /** 在指定位置閃過一道刀光 */
   slash(at: THREE.Vector3, facing: THREE.Quaternion, color = 0xcfe6ff, big = false): void {
-    const mat = new THREE.MeshBasicMaterial({ map: slashArc(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), mat);
+    const mat = new THREE.MeshBasicMaterial({ map: slashArc(), color, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), mat);
     mesh.position.copy(at);
     mesh.renderOrder = 5;
     mesh.quaternion.copy(facing);
@@ -76,8 +76,8 @@ export class Effects {
     const s0 = big ? 1.3 : 1;
     this.group.add(mesh);
     void this.tweens.to(260, (k) => {
-      mesh.scale.setScalar(s0 * (0.7 + k * 0.6));
-      mat.opacity = 1 - k;
+      mesh.scale.setScalar(s0 * (0.75 + k * 0.5));
+      mat.opacity = 0.85 * (1 - k * k);
     }, { easing: ease.outQuad }).then(() => {
       mesh.removeFromParent();
       mesh.geometry.dispose();

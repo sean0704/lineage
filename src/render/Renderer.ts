@@ -91,6 +91,12 @@ export class Renderer {
     this.fog.density = view.fogDensity;
     this.post.setGrade(view.grade ?? {});
     this.scene.environmentIntensity = view.environment ?? 0.1;
+    // 趁場景切換的淡出黑幕時預先編譯著色器，避免第一次看到物件時卡頓
+    try {
+      this.gl.compile(this.scene, this.camera);
+    } catch {
+      /* 預編譯失敗不影響正常繪製 */
+    }
     this.stopShake();
   }
 

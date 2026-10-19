@@ -717,7 +717,7 @@ export class Game implements PanelHost {
             audio.hit(ev.crit);
             const camQ = new THREE.Quaternion();
             this.renderer.camera.getWorldQuaternion(camQ);
-            this.effects.slash(view.center(), camQ, ev.crit ? 0xffe27a : ev.skill ? 0x9ad0ff : 0xe8f2ff, heavy);
+            this.effects.slash(view.center(), camQ, ev.crit ? 0xffc04a : ev.skill ? 0x6ab8ff : 0xb8d4ff, heavy);
             this.effects.burst(view.center(), { color: 0xffc070, count: ev.crit ? 26 : 12, speed: 2.5, life: 0.5, size: 0.06 });
             void view.hit(tw, heavy);
             const p = this.project(view.anchor());

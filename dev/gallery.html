@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模型展示</title>
+    <style>
+      body { margin: 0; background: #0c0f16; color: #e2e8f0; font-family: system-ui, sans-serif; overflow: hidden; }
+      #labels { position: fixed; inset: 0; pointer-events: none; }
+      #labels span { position: absolute; transform: translateX(-50%); font-size: 12px; background: rgba(0,0,0,.6); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <div id="labels"></div>
+    <script type="module" src="./gallery.ts"></script>
+  </body>
+</html>

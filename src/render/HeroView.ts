@@ -22,7 +22,7 @@ export class HeroView {
 
   constructor(camera: THREE.Camera) {
     camera.add(this.group);
-    this.weaponPivot.position.set(0.4, -0.42, -0.62);
+    this.weaponPivot.position.set(0.34, -0.29, -0.58);
     this.shieldPivot.position.set(-0.5, -0.5, -0.66);
     this.group.add(this.weaponPivot, this.shieldPivot);
   }
@@ -39,8 +39,9 @@ export class HeroView {
     const weapon = buildWeapon(heroWeaponStyle(weaponKey), this.kit, accent);
     // 縮小並向外側傾斜，避免大型武器遮住視野
     weapon.rotation.set(-0.55, 0.3, -0.12);
-    weapon.scale.setScalar(0.72);
+    weapon.scale.setScalar(0.6);
     this.weaponPivot.add(weapon);
+    this.weaponPivot.add(this.buildArm());
     if (hasShield) {
       const shield = this.kit.mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.035, 12), this.kit.mat(0x5a4632, { rough: 0.8 }));
       shield.rotation.x = Math.PI / 2;
@@ -57,6 +58,42 @@ export class HeroView {
       }
       o.renderOrder = 10;
     });
+  }
+
+  /** 握著武器的鐵手甲與前臂（座標與武器握把同一個樞紐，揮砍時一起動） */
+  private buildArm(): THREE.Group {
+    const k = this.kit;
+    const arm = new THREE.Group();
+    const steel = k.mat(0x6a707c, { metal: 0.85, rough: 0.32 });
+    const dark = k.mat(0x2e3036, { metal: 0.7, rough: 0.45 });
+    const leather = k.mat(0x4a3020, { rough: 0.85 });
+    const cloth = k.mat(0x2a3a6a, { rough: 0.95 });
+    // 握拳：手背甲片＋四指關節
+    const fist = k.mesh(new THREE.BoxGeometry(0.075, 0.095, 0.085), steel);
+    fist.position.set(0.012, 0, 0.004);
+    arm.add(fist);
+    for (let i = 0; i < 4; i++) {
+      const knuckle = k.mesh(new THREE.BoxGeometry(0.03, 0.022, 0.03), dark);
+      knuckle.position.set(-0.03, 0.033 - i * 0.022, 0.03);
+      arm.add(knuckle);
+    }
+    const thumb = k.mesh(new THREE.BoxGeometry(0.025, 0.05, 0.028), steel);
+    thumb.position.set(-0.03, 0.04, -0.025);
+    thumb.rotation.z = 0.4;
+    arm.add(thumb);
+    // 前臂：手甲護腕 → 皮革 → 袖口布料，往鏡頭右下延伸
+    const wrist = new THREE.Vector3(0.03, -0.05, 0.03);
+    const elbow = new THREE.Vector3(0.2, -0.33, 0.46);
+    arm.add(k.limb(new THREE.Vector3(0.02, -0.02, 0.02), wrist, 0.042, 0.044, steel));
+    const cuffEnd = wrist.clone().lerp(elbow, 0.45);
+    arm.add(k.limb(wrist, cuffEnd, 0.06, 0.068, steel));
+    const flare = k.mesh(new THREE.TorusGeometry(0.068, 0.012, 4, 12), dark);
+    flare.position.copy(cuffEnd);
+    flare.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), elbow.clone().sub(wrist).normalize());
+    arm.add(flare);
+    arm.add(k.limb(cuffEnd, elbow, 0.062, 0.07, leather));
+    arm.add(k.limb(elbow, elbow.clone().add(new THREE.Vector3(0.05, -0.08, 0.15)), 0.075, 0.085, cloth));
+    return arm;
   }
 
   setWalking(on: boolean): void {
@@ -87,7 +124,7 @@ export class HeroView {
     const bobAmt = this.walking ? 0.02 : 0.006;
     const bob = Math.sin(this.walkPhase) * bobAmt;
     const s = this.swing;
-    this.weaponPivot.position.set(0.4 - s * 0.32 - this.guard * 0.1, -0.42 + Math.abs(bob) + s * 0.08 + this.guard * 0.1, -0.62 - Math.max(0, s) * 0.12);
+    this.weaponPivot.position.set(0.34 - s * 0.32 - this.guard * 0.1, -0.29 + Math.abs(bob) + s * 0.08 + this.guard * 0.1, -0.58 - Math.max(0, s) * 0.12);
     this.weaponPivot.rotation.set(s * -0.9 + this.guard * 0.4, s * 0.6, s * 1.2 + this.guard * 0.9);
     this.shieldPivot.position.set(-0.5 + this.guard * 0.3, -0.5 + bob + this.guard * 0.24, -0.66 + this.guard * 0.12);
     this.shieldPivot.rotation.set(0, this.guard * 0.6, 0);

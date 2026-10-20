@@ -163,7 +163,7 @@ class AudioEngine {
 
   // ───── 音效 ─────
   swing(): void {
-    this.noise(0.16, { freq: 2400, freqTo: 500, q: 2, gain: 0.35 });
+    this.noise(0.16, { freq: 2400, freqTo: 500, q: 2, gain: 0.7 });
   }
   hit(crit = false): void {
     this.tone(crit ? 220 : 160, 0.16, { type: 'triangle', slideTo: 45, gain: 0.5 });
@@ -171,7 +171,7 @@ class AudioEngine {
     if (crit) this.tone(1320, 0.18, { type: 'square', gain: 0.06, delay: 0.02 });
   }
   miss(): void {
-    this.noise(0.22, { freq: 900, freqTo: 3000, q: 3, gain: 0.18 });
+    this.noise(0.22, { freq: 900, freqTo: 3000, q: 3, gain: 0.4 });
   }
   hurt(heavy = false): void {
     this.tone(heavy ? 90 : 120, heavy ? 0.35 : 0.2, { type: 'sawtooth', slideTo: 40, gain: 0.28 });
@@ -182,7 +182,7 @@ class AudioEngine {
     this.tone(2700, 0.2, { type: 'sine', gain: 0.08 });
   }
   footstep(): void {
-    this.noise(0.07, { filter: 'lowpass', freq: 380 + Math.random() * 120, gain: 0.25 });
+    this.noise(0.07, { filter: 'lowpass', freq: 380 + Math.random() * 120, gain: 0.55 });
   }
   bump(): void {
     this.tone(70, 0.12, { type: 'sine', gain: 0.3 });
@@ -200,11 +200,11 @@ class AudioEngine {
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone(f, 0.28, { type: 'triangle', gain: 0.14, delay: 0.12 + i * 0.08 }));
   }
   coin(): void {
-    this.tone(988, 0.08, { type: 'square', gain: 0.06 });
-    this.tone(1319, 0.18, { type: 'square', gain: 0.06, delay: 0.07 });
+    this.tone(988, 0.08, { type: 'square', gain: 0.1 });
+    this.tone(1319, 0.18, { type: 'square', gain: 0.1, delay: 0.07 });
   }
   levelUp(): void {
-    [440, 554, 659, 880, 1109, 1319].forEach((f, i) => this.tone(f, 0.22, { type: 'square', gain: 0.07, delay: i * 0.075 }));
+    [440, 554, 659, 880, 1109, 1319].forEach((f, i) => this.tone(f, 0.22, { type: 'square', gain: 0.1, delay: i * 0.075 }));
     this.tone(1760, 0.6, { type: 'triangle', gain: 0.08, delay: 0.5 });
   }
   bossAlert(): void {
@@ -220,7 +220,7 @@ class AudioEngine {
     this.noise(0.4, { filter: 'lowpass', freq: 800, freqTo: 100, gain: 0.25 });
   }
   stairs(): void {
-    for (let i = 0; i < 5; i++) this.noise(0.08, { filter: 'lowpass', freq: 420 - i * 40, gain: 0.22, delay: i * 0.13 });
+    for (let i = 0; i < 5; i++) this.noise(0.08, { filter: 'lowpass', freq: 420 - i * 40, gain: 0.6, delay: i * 0.13 });
   }
   enchantSuccess(): void {
     [659, 784, 988, 1319, 1568].forEach((f, i) => this.tone(f, 0.3, { type: 'triangle', gain: 0.1, delay: i * 0.06 }));
@@ -234,7 +234,7 @@ class AudioEngine {
   }
   victory(): void {
     const notes = [523, 523, 523, 659, 784, 659, 784, 1047];
-    notes.forEach((f, i) => this.tone(f, 0.3, { type: 'square', gain: 0.07, delay: i * 0.14 }));
+    notes.forEach((f, i) => this.tone(f, 0.3, { type: 'square', gain: 0.12, delay: i * 0.14 }));
   }
   click(): void {
     this.tone(660, 0.04, { type: 'square', gain: 0.03 });

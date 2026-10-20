@@ -191,13 +191,13 @@ export class Music {
             const bar = Math.floor(b / 4) % chords.length;
             const ch = chords[bar];
             if (b % 4 === 0) {
-              this.pad(out, ch.map((n) => midi(n - 12)), t, spb * 4.2, 0.018);
-              this.pluck(out, midi(ch[0] - 24), t, spb * 2, 0.06, 900);
+              this.pad(out, ch.map((n) => midi(n - 12)), t, spb * 4.2, 0.014);
+              this.pluck(out, midi(ch[0] - 24), t, spb * 2, 0.045, 900);
             }
             for (let i = 0; i < 2; i++) {
               const step = pattern[((b % 4) * 2 + i) % pattern.length];
               const note = step === 3 ? ch[0] + 12 : ch[step];
-              if (rnd() < 0.92) this.pluck(out, midi(note), t + i * spb * 0.5, 0.9, 0.045);
+              if (rnd() < 0.92) this.pluck(out, midi(note), t + i * spb * 0.5, 0.9, 0.035);
             }
             // 偶爾的旋律裝飾
             if (b % 8 === 6 && rnd() < 0.6) {
@@ -231,11 +231,12 @@ export class Music {
           beat: (b, t, spb) => {
             for (let i = 0; i < 2; i++) {
               const n = root - 12 + riff[(b * 2 + i) % riff.length];
-              this.pluck(out, midi(n), t + i * spb * 0.5, spb * 0.45, 0.07, 1100);
+              this.pluck(out, midi(n), t + i * spb * 0.5, spb * 0.45, 0.045, 1100);
             }
-            if (b % 2 === 0) this.drum(out, t, 'kick', 0.32);
-            else this.drum(out, t, 'snare', 0.08);
-            if (boss && b % 4 === 3) this.drum(out, t + spb * 0.5, 'tom', 0.22);
+            // 鼓聲壓低，避免蓋過打擊音效（依實測混音比例調整）
+            if (b % 2 === 0) this.drum(out, t, 'kick', 0.11);
+            else this.drum(out, t, 'snare', 0.035);
+            if (boss && b % 4 === 3) this.drum(out, t + spb * 0.5, 'tom', 0.08);
             if (b % 8 === 0) this.pad(out, [midi(root), midi(root + 3), midi(root + 7)], t, spb * 8, 0.012);
             if (boss && b >= 16) {
               const n = root + motif[Math.floor(b / 2) % motif.length];
